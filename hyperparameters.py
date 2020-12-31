@@ -1,0 +1,12 @@
+NUMBER_GAMES_PER_SELF_PLAY = 25000
+
+NUMBER_OF_BATCHES = 1000
+
+NUMBER_GAMES_VS_OLD_VERSION = 400
+WIN_PERCENTAGE = 55
+
+BUFFER_SIZE = 500000
+
+SEED = 0
+
+C = 0.1 # parameter for controlling exploration vs exploitation in MCTS
