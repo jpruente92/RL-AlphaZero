@@ -125,10 +125,8 @@ def evaluate(agent, game):
 
 
 def alpha_0_pipeline(start_version, game, name_for_saving, seed):
-    shared_replay_buffer = Replay_buffer(start_version, name_for_saving, seed)
     agent = Agent(type="alphaZero", player=1, seed=seed, version=start_version, scnds_per_move=SCNDS_PER_MOVE_TRAINING,
-                  game=game,
-                  replay_buffer=shared_replay_buffer, name_for_saving=name_for_saving)
+                  game=game, name_for_saving=name_for_saving)
     if start_version == 0:
         agent.save(0)
 

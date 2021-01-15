@@ -15,14 +15,13 @@ def play_game(game, seed):
     game.start_game(agent_1,agent_2,1)
 
 
-def tournament(game, seed):
+def tournament(game, seed, latest_alpha0_version):
     game.show_output = False
     agents = []
-    for version in range(0,1):
-        agents.append(Agent("alphaZero",seed=seed, version=1, scnds_per_move=0.1, game=game, player=1))
-        agents.append(Agent("alphaZero", seed=seed, version=0, scnds_per_move=0.1, game=game, player=1))
-    # agents.append(Agent("mcts",seed=seed, player=1, scnds_per_move=0.1, game = game))
-    # agents.append(Agent("mcts", seed=seed, player=-1,scnds_per_move=0.1, game = game))
+    for version in range(0,latest_alpha0_version+1):
+        agents.append(Agent("alphaZero",seed=seed, version=version, scnds_per_move=0.1, game=game, player=1))
+    agents.append(Agent("mcts",seed=seed, player=1, scnds_per_move=0.1, game = game))
+    agents.append(Agent("random", seed=seed, player=-1,scnds_per_move=0.1, game = game))
     nr_games = 10
     statistics = defaultdict(lambda: 0)
     nr_games_played = 0
@@ -50,7 +49,7 @@ def tournament(game, seed):
 
 
 if __name__ == '__main__':
-    show_output = False
+    show_output = True
     name = "Connect_4"
     sleeping_time = 0
 
@@ -63,13 +62,11 @@ if __name__ == '__main__':
     game = Game(random, 4, 6, 7, gravity_on=True, show_output=show_output, sleeping_time=sleeping_time)  # connect 4
 
     # play a tournament
-    # tournament(game, seed)
-    # tournament(game, seed)
-    # tournament(game, seed)
-    # tournament(game, seed)
+    # tournament(game, seed, 0)
+
 
     # play a game
-    # play_game(game, seed)
+    play_game(game, seed)
 
     # train an agent
-    alpha_0_pipeline(0, game, name , seed)
+    # alpha_0_pipeline(0, game, name , seed)
