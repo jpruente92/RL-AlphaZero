@@ -9,8 +9,8 @@ from agent import Agent
 from hyperparameters import *
 
 
-def play_game(game, seed):
-    agent_1 = Agent("mcts",seed=seed, version=8, scnds_per_move=2, game=game, player=-1)
+def play_game(game, seed, oponent, version=0):
+    agent_1 = Agent(oponent,seed=seed, version=version, scnds_per_move=2, game=game, player=-1)
     agent_2 = Agent("user",seed=seed, player=1)
     game.start_game(agent_1,agent_2,1)
 
@@ -65,8 +65,8 @@ if __name__ == '__main__':
     # tournament(game, seed, 0)
 
 
-    # play a game
-    play_game(game, seed)
+    # play a game (options for oponents include "mcts", "alphazero", "random", "user")
+    play_game(game, seed, oponent="mcts")
 
     # train an agent
     # alpha_0_pipeline(0, game, name , seed)
