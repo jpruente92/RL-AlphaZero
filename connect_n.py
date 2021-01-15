@@ -25,6 +25,7 @@ class Game():
         self.winner = None
         self.feasible_actions = [i for i in range(self.nr_actions)]
         self.user_action = None
+        self.all_board_states = []
 
         self.show_output = show_output
         if show_output:
@@ -36,13 +37,15 @@ class Game():
         clone.board = copy.deepcopy(self.board)
         clone.feasible_actions = copy.deepcopy(self.feasible_actions)
         clone.user_action = self.user_action
+        clone.all_board_states = copy.deepcopy(self.all_board_states)
         return clone
 
     def reset(self):
-        self.board = np.zeros(*self.state_shape)
+        self.board = np.zeros(self.state_shape)
         self.winner = None
         self.feasible_actions = [i for i in range(self.nr_actions)]
         self.user_action = None
+        self.all_board_states = []
 
     def step_if_feasible(self, action, player):
         if self.gravity_on:
@@ -53,6 +56,7 @@ class Game():
                     self.feasible_actions = [x for x in self.feasible_actions if x != action]
                 if self.board[row, action] == 0:
                     self.board[row, action] = player
+                    self.all_board_states.append(copy.deepcopy(self.board))
                     self.check_if_won(row, action, player)
                     break
 
@@ -60,6 +64,7 @@ class Game():
             row, col = self.translate_action(action)
             if self.board[row, col] == 0:
                 self.board[row, col] = player
+                self.all_board_states.append(copy.deepcopy(self.board))
                 self.check_if_won(row, col, player)
             # action used and therefore not feasible anymore
             self.feasible_actions = [x for x in self.feasible_actions if x != action]
@@ -199,13 +204,20 @@ class Game():
 
             print()
 
-    def start_game(self, player_1, player_2):
-        players = [player_1, player_2]
-        crnt_player = players[self.random.randint(0, 1)]
-        while self.winner is None and len(self.feasible_actions) > 0:
-            action = crnt_player.compute_action(self)
-            self.step_if_feasible(action, crnt_player.player)
+    def start_game(self, agent_1, agent_2, start_player=None):
+        agents = [agent_1, agent_2]
+        if start_player is None:
+            crnt_agent = agents[self.random.randint(0, 1)]
+        else:
+            crnt_agent = agents[start_player]
+        while self.winner is None:
+            if len(self.feasible_actions) == 0:
+                self.winner = 0
+                break
+            action = crnt_agent.compute_action(self)
+            self.step_if_feasible(action, crnt_agent.player)
             time.sleep(self.sleeping_time)
-            crnt_player = player_1 if crnt_player is player_2 else player_2
-        while True:
-            self.gui.refresh_picture(self.board)
+            crnt_agent = agent_1 if crnt_agent is agent_2 else agent_2
+        if self.show_output:
+            while True:
+                self.gui.refresh_picture(self.board)

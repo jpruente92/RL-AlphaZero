@@ -77,7 +77,7 @@ class Gui(Tk):
                 winner = 2
             self.canvas.create_text((x + 0.5 * width_square, self.height_field - y - 0.5 * width_square),
                                     font=("Purisa", self.fontsize), text="The winner is player {}".format(winner), fill="black")
-        if len(self.game.feasible_actions) == 0:
+        elif len(self.game.feasible_actions) == 0:
             middle = np.math.floor(self.nr_columns / 2)
             x = offset_square * (middle + 1) + width_square * middle
             y = offset_square * (self.nr_rows + 1) + width_square * self.nr_rows
