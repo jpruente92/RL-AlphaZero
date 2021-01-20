@@ -10,6 +10,7 @@ from hyperparameters import *
 from pathos.multiprocessing import ProcessingPool as Pool
 
 # playing against itself to fill the replay buffer
+from neural_network import Neural_network
 from replay_buffer import Replay_buffer
 
 
@@ -28,7 +29,7 @@ def self_play_parallel(agent, game):
 def self_play(agent, game):
     start_time = time.time()
     self_play_process((agent, game, False))
-    print("\r\tSelf play completed\t time for Self play: {} seconds".format((time.time() - start_time)))
+    print("\r\tSelf play completed\t time for Self play: {} seconds size replay buffer: {}".format((time.time() - start_time),len(agent_1.replay_buffer)))
 
 
 def self_play_process(args):
@@ -47,6 +48,7 @@ def self_play_process(args):
         start_agent = agents[game.random.randint(0, 1)]
         crnt_agent = start_agent
         step = 0
+
         states_so_far_list = []
         crnt_player_list = []
         search_probabilities_list = []
@@ -56,11 +58,11 @@ def self_play_process(args):
                 game.winner = 0
                 break
             action = crnt_agent.compute_action(game, True)
-            # if crnt_agent.player == 1:
-            states_so_far_list.append(copy.deepcopy(game.all_board_states))
-            crnt_player_list.append(crnt_agent.player)
-            search_probabilities = compute_search_probabilities(crnt_agent, game)
-            search_probabilities_list.append(search_probabilities)
+            if crnt_agent.player == 1:
+                states_so_far_list.append(copy.deepcopy(game.all_board_states))
+                crnt_player_list.append(crnt_agent.player)
+                search_probabilities = compute_search_probabilities(crnt_agent, game)
+                search_probabilities_list.append(search_probabilities)
             game.step_if_feasible(action, crnt_agent.player)
             crnt_agent = agent_1 if crnt_agent is agent_2 else agent_2
         # store information in shared rpb
@@ -70,8 +72,9 @@ def self_play_process(args):
             agent_1.replay_buffer.add_experience(states_so_far, search_probabilities, outcome, crnt_player,
                                                  game.state_shape)
         if not parallel:
-            print("\r\tSelf play - {}% done\t time used so far: {} seconds".format(
-                (episode + 1) / NUMBER_GAMES_PER_SELF_PLAY * 100, (time.time() - start_time)), end="")
+            print("\r\tSelf play - {}% done\t time used so far: {} seconds\t size replay buffer: {}".format(
+                (episode) / NUMBER_GAMES_PER_SELF_PLAY * 100, (time.time() - start_time), len(agent_1.replay_buffer)), end="")
+    agent_1.replay_buffer.consistency_check()
 
 
 # play a game and return true if agent wins
@@ -104,20 +107,30 @@ def evaluate(agent, game):
             number_wins_new_agent += 1
         elif outcome == 0:
             number_ties += 1
+        win_prob = number_wins_new_agent/i*100
+        tie_prob = number_ties / i * 100
+        print("\r\t{} games completed\t time so far: {} seconds\twin probability: {}%\t tie probability: {}%".format(i,(time.time() - start_time),
+                                                                                                                     win_prob, tie_prob), end="")
+    print()
     # ties count as wins times a weight, otherwise it is too hard to be accepted because of the high tie probability in some games
     if number_wins_new_agent + number_ties * WEIGHT_FOR_TIES_IN_EVALUATION >= WIN_PERCENTAGE * NUMBER_GAMES_VS_OLD_VERSION / 100:
         # accept new version
+        # reset replay buffer
+        agent.replay_buffer.reset()
         agent.save(agent.version)
+
         print("version {} accepted with win probability: {}% and tie probability: {}%".format(agent.version,
                                                                                               number_wins_new_agent / NUMBER_GAMES_VS_OLD_VERSION * 100,
                                                                                               number_ties / NUMBER_GAMES_VS_OLD_VERSION * 100))
     else:
-        agent = Agent(type="alphaZero", player=1, seed=agent.seed, version=agent.version - 1,
-                      scnds_per_move=SCNDS_PER_MOVE_TRAINING,
-                      game=game, name_for_saving=agent.name_for_saving)
         print("version {} refused with win probability: {}% and tie probability: {}%".format(agent.version,
                                                                                              number_wins_new_agent / NUMBER_GAMES_VS_OLD_VERSION * 100,
                                                                                              number_ties / NUMBER_GAMES_VS_OLD_VERSION * 100))
+        # go back to network of previous version but keep replay buffer
+        agent.version = agent.version-1
+        agent.network=Neural_network(version=agent.version, nr_actions=game.nr_actions, state_shape=game.state_shape, name_for_saving=agent.name_for_saving)
+    # always save replaybuffer
+    agent.replay_buffer.save_to_file(agent.version)
     print("\tEvaluation completed\t time for evaluation: {} seconds".format((time.time() - start_time)))
     print(
         "__________________________________________________________________________________________________________________________")
@@ -127,8 +140,10 @@ def evaluate(agent, game):
 def alpha_0_pipeline(start_version, game, name_for_saving, seed):
     agent = Agent(type="alphaZero", player=1, seed=seed, version=start_version, scnds_per_move=SCNDS_PER_MOVE_TRAINING,
                   game=game, name_for_saving=name_for_saving)
-    if start_version == 0:
+    if start_version == -1:
+        agent.version = 0
         agent.save(0)
+
 
     while True:
         # play games to fill replay buffer

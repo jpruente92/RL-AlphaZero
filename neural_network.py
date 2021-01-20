@@ -29,7 +29,7 @@ class Residual_layer(nn.Module):
 class Convolutional_layer(nn.Module):
     def __init__(self):
         super(Convolutional_layer, self).__init__()
-        self.conv1 = nn.Conv2d(8, 256, 3, padding=1)
+        self.conv1 = nn.Conv2d(NR_BOARD_STATES_SAVED, 256, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(256)
 
 

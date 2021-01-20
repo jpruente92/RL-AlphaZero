@@ -8,6 +8,8 @@ from replay_buffer import Replay_buffer
 
 from hyperparameters import *
 
+from icecream import ic
+
 
 class Agent():
     def __init__(self, type, player, seed, version=0, scnds_per_move=1, game=None, replay_buffer=None,

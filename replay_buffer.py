@@ -1,9 +1,10 @@
 import pickle
 import time
-from collections import deque, namedtuple
+from collections import deque, namedtuple, defaultdict
 import random
 from functools import reduce
 from itertools import repeat
+from icecream import ic
 
 import numpy as np
 
@@ -27,9 +28,14 @@ class Replay_buffer():
     def __len__(self):
         return len(self.outcomes)
 
+    def reset(self):
+        self.nn_inputs = deque(maxlen=BUFFER_SIZE)
+        self.search_probabilities = deque(maxlen=BUFFER_SIZE)
+        self.outcomes = deque(maxlen=BUFFER_SIZE)
+
     # gets a list of all states so far
     def add_experience(self, states_so_far, search_probabilities, outcome, crnt_player, state_shape):
-        nn_input = prepare_nn_input(states_so_far, state_shape).squeeze()
+        nn_input = prepare_nn_input(states_so_far, state_shape).squeeze(0)
         nn_input*=-1
         self.nn_inputs.append(nn_input)
         # outcome has to be multiplied with the crnt player because the neural networks input is too
@@ -43,11 +49,14 @@ class Replay_buffer():
 
 
     def load_from_file(self, version):
-        with open('./replay_buffers/{}_version_{}.pickle'.format(self.name_for_saving,version), 'rb') as handle:
-            nn_inputs, outcomes, search_probabilities = pickle.load(handle)
-        self.nn_inputs = nn_inputs
-        self.outcomes = outcomes
-        self.search_probabilities = search_probabilities
+        try:
+            with open('./replay_buffers/{}_version_{}.pickle'.format(self.name_for_saving,version), 'rb') as handle:
+                nn_inputs, outcomes, search_probabilities = pickle.load(handle)
+            self.nn_inputs = nn_inputs
+            self.outcomes = outcomes
+            self.search_probabilities = search_probabilities
+        except:
+            self.reset()
 
     def sample(self, batchsize, indices=None):
         if indices is None:
@@ -59,5 +68,35 @@ class Replay_buffer():
         return nn_inputs, search_probabilities, outcomes
 
 
+    # there might be board situations that give a different output due to the randomness in the self play process
+    # if this is the case, the samples are aggregated and the mean is taken
+    def consistency_check(self):
+        search_probs_by_inputs = defaultdict(lambda:[])
+        outcomes_by_inputs = defaultdict(lambda:[])
+        for nn_input, search_prob, outcome in zip(self.nn_inputs, self.search_probabilities, self.outcomes):
+            hashable_nn_input = tuple(nn_input.reshape(-1))
+            list_search_probs = search_probs_by_inputs[hashable_nn_input]
+            list_search_probs.append(search_prob)
+            search_probs_by_inputs[hashable_nn_input] = list_search_probs
+
+            list_outcomes = outcomes_by_inputs[hashable_nn_input]
+            list_outcomes.append(outcome)
+            outcomes_by_inputs[hashable_nn_input] = list_outcomes
+
+        self.search_probabilities.clear()
+        self.outcomes.clear()
+        for nn_input in self.nn_inputs:
+            hashable_nn_input = tuple(nn_input.reshape(-1))
+            # if len(search_probs_by_inputs[hashable_nn_input])>1:
+            #     print("\t\tinconsistency found")
+            #     ic(search_probs_by_inputs[hashable_nn_input])
+
+            self.search_probabilities.append(np.array(search_probs_by_inputs[hashable_nn_input]).mean(axis=0))
+
+            # if (len(outcomes_by_inputs[hashable_nn_input]) > 1):
+            #     print("\t\tinconsistency found")
+            #     ic(outcomes_by_inputs[hashable_nn_input])
+
+            self.outcomes.append(np.array(outcomes_by_inputs[hashable_nn_input]).mean())
 
 
