@@ -29,14 +29,15 @@ def self_play_parallel(agent, game):
 def self_play(agent, game):
     start_time = time.time()
     self_play_process((agent, game, False))
-    print("\r\tSelf play completed\t time for Self play: {} seconds size replay buffer: {}".format((time.time() - start_time),len(agent_1.replay_buffer)))
+    print("\r\tSelf play completed\t time for Self play: {} seconds size replay buffer: {}".format((time.time() - start_time),len(agent.replay_buffer)))
 
 
 def self_play_process(args):
     start_time = time.time()
     agent_1, game, parallel = args
-    agent_2 = agent_1.clone()
-    agent_2.player = -agent_2.player
+    agent_2 = Agent(type="alphaZero", player=-1, seed=agent_1.seed, version=agent_1.version,
+                      scnds_per_move=SCNDS_PER_MOVE_TRAINING,
+                      game=game, name_for_saving=agent_1.name_for_saving)
     agents = [agent_1, agent_2]
     nr_episodes = NUMBER_GAMES_PER_SELF_PLAY
     if parallel:
@@ -58,14 +59,13 @@ def self_play_process(args):
                 game.winner = 0
                 break
             action = crnt_agent.compute_action(game, True)
-            if crnt_agent.player == 1:
-                states_so_far_list.append(copy.deepcopy(game.all_board_states))
-                crnt_player_list.append(crnt_agent.player)
-                search_probabilities = compute_search_probabilities(crnt_agent, game)
-                search_probabilities_list.append(search_probabilities)
+            states_so_far_list.append(copy.deepcopy(game.all_board_states))
+            crnt_player_list.append(crnt_agent.player)
+            search_probabilities = compute_search_probabilities(crnt_agent, game)
+            search_probabilities_list.append(search_probabilities)
             game.step_if_feasible(action, crnt_agent.player)
             crnt_agent = agent_1 if crnt_agent is agent_2 else agent_2
-        # store information in shared rpb
+        # store information in rpb of first agent
         outcome = game.winner
         for states_so_far, crnt_player, search_probabilities in zip(states_so_far_list, crnt_player_list,
                                                                     search_probabilities_list):
@@ -116,7 +116,7 @@ def evaluate(agent, game):
     if number_wins_new_agent + number_ties * WEIGHT_FOR_TIES_IN_EVALUATION >= WIN_PERCENTAGE * NUMBER_GAMES_VS_OLD_VERSION / 100:
         # accept new version
         # reset replay buffer
-        agent.replay_buffer.reset()
+        # agent.replay_buffer.reset()
         agent.save(agent.version)
 
         print("version {} accepted with win probability: {}% and tie probability: {}%".format(agent.version,

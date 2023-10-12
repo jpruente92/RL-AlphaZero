@@ -35,11 +35,10 @@ class Replay_buffer():
 
     # gets a list of all states so far
     def add_experience(self, states_so_far, search_probabilities, outcome, crnt_player, state_shape):
-        nn_input = prepare_nn_input(states_so_far, state_shape).squeeze(0)
-        nn_input*=-1
+        nn_input = prepare_nn_input(states_so_far, state_shape, crnt_player).squeeze(0)
         self.nn_inputs.append(nn_input)
         # outcome has to be multiplied with the crnt player because the neural networks input is too
-        self.outcomes.append(outcome*crnt_player)
+        self.outcomes.append(outcome)
         self.search_probabilities.append(search_probabilities)
 
     def save_to_file(self, version):

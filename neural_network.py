@@ -26,37 +26,38 @@ class Residual_layer(nn.Module):
         x = F.relu(x)
         return x
 
+
 class Convolutional_layer(nn.Module):
     def __init__(self):
         super(Convolutional_layer, self).__init__()
-        self.conv1 = nn.Conv2d(NR_BOARD_STATES_SAVED, 256, 3, padding=1)
+        self.conv1 = nn.Conv2d(NR_BOARD_STATES_SAVED * 3, 256, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(256)
-
 
     def forward(self, input):
         x = self.conv1(input)
         x = self.bn1(x)
         x = F.relu(x)
         return x
+
 
 class Policy_head(nn.Module):
     def __init__(self, state_shape, nr_actions):
         super(Policy_head, self).__init__()
-        self.conv1 = nn.Conv2d(256, 2, 1, padding=0)
-        self.bn1 = nn.BatchNorm2d(2)
+        self.conv1 = nn.Conv2d(256, 10, 1, padding=0)
+        self.bn1 = nn.BatchNorm2d(10)
 
-        self.input_length_linear = 2*reduce(lambda a,b: a*b,state_shape)
+        self.input_length_linear = 10 * reduce(lambda a, b: a * b, state_shape)
         self.fc = nn.Linear(self.input_length_linear, nr_actions)
-
 
     def forward(self, input):
         x = self.conv1(input)
         x = self.bn1(x)
         x = F.relu(x)
-        x = x.view(-1,self.input_length_linear)
+        x = x.view(-1, self.input_length_linear)
         x = self.fc(x)
         x = F.softmax(x, dim=1)
         return x
+
 
 class Value_head(nn.Module):
     def __init__(self, state_shape):
@@ -65,17 +66,16 @@ class Value_head(nn.Module):
         self.conv1 = nn.Conv2d(256, 1, 1, padding=0)
         self.bn1 = nn.BatchNorm2d(1)
 
-        self.input_length_linear1 = reduce(lambda a,b: a*b,state_shape)
+        self.input_length_linear1 = reduce(lambda a, b: a * b, state_shape)
         self.input_length_linear2 = 256
         self.fc1 = nn.Linear(self.input_length_linear1, self.input_length_linear2)
         self.fc2 = nn.Linear(self.input_length_linear2, 1)
-
 
     def forward(self, input):
         x = self.conv1(input)
         x = self.bn1(x)
         x = F.relu(x)
-        x = x.view(-1,self.input_length_linear1)
+        x = x.view(-1, self.input_length_linear1)
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc2(x)
@@ -85,10 +85,12 @@ class Value_head(nn.Module):
 
 class Neural_network(nn.Module):
 
-    def __init__(self,version, nr_actions, state_shape, name_for_saving):
+    def __init__(self, version, nr_actions, state_shape, name_for_saving):
         super().__init__()
         self.conv = Convolutional_layer()
-        self.residuals = [Residual_layer().to(DEVICE) for i in range(NR_RESIDUAL_LAYERS)]
+        # residual blocks
+        for block in range(NR_RESIDUAL_LAYERS):
+            setattr(self, "res_%i" % block, Residual_layer())
         self.policy_head = Policy_head(state_shape, nr_actions)
         self.value_head = Value_head(state_shape)
 
@@ -98,15 +100,11 @@ class Neural_network(nn.Module):
         if version >= 0 and name_for_saving is not None:
             self.load_model("./neural_networks/{}_version_{}.pth".format(self.name_for_saving, version))
 
-
-
-    def forward(self, input, crnt_player):
-        # we double the game positions by changing the players so that the crnt player is always player nr 1
-        x = input*crnt_player
+    def forward(self, input):
+        x = input
         x = self.conv(x)
-        for res in self.residuals:
-            x = res(x)
-        # the value is always in favor of the crnt player no matter who he is (1 if crnt player wins, 0 for tie, -1 for loss)
+        for block in range(NR_RESIDUAL_LAYERS):
+            x = getattr(self, "res_%i" % block)(x)
         return self.value_head(x), self.policy_head(x)
 
     def save_model(self, version):

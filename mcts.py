@@ -72,14 +72,16 @@ class MCTS():
         else:
             # if competitive or no neural network
             # action of child with highest average value is taken
-            best_child = None
             for child in self.crnt_root.children:
-                score = child.sum_of_observed_values / child.visit_count
+                # score = child.sum_of_observed_values / child.visit_count
+                # multiply score with the mcts player because player -1 favors scores of -1
+                # score *= self.player
+                score = child.visit_count
                 # print(score, child.visit_count, child.sum_of_observed_values, child.action_before_state)
+                # print(child.action_before_state, child.sum_of_observed_values, child.visit_count, score)
                 if score > best_score:
                     best_action = child.action_before_state
                     best_score = score
-                    best_child=child
             # print()
             # for child in best_child.children:
             #     score = child.sum_of_observed_values / child.visit_count

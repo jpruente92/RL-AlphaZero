@@ -35,15 +35,20 @@ class Agent():
             self.scnds_per_move = scnds_per_move
             self.name_for_saving = name_for_saving
 
+
+    def set_player(self, player):
+        self.player = player
+        self.mcts.player = player
+
     def reset_mcts(self):
         self.mcts.reset()
 
-    def clone(self):
-        clone = Agent(type=self.type, player=self.player, seed=self.seed, version=self.version,
+    def clone(self, player):
+        clone = Agent(type=self.type, player=player, seed=self.seed, version=self.version,
                       scnds_per_move=self.scnds_per_move, game=self.game,
                       replay_buffer=self.replay_buffer, name_for_saving=self.name_for_saving)
         # clone shall have its own mcts
-        clone.mcts = MCTS(self.scnds_per_move, self.game, self.player, self.seed, self.network)
+        clone.mcts = MCTS(clone.scnds_per_move, clone.game, player, clone.seed, clone.network)
         return clone
 
     def compute_action(self, game, training=False):
@@ -70,6 +75,7 @@ class Agent():
         # hold at most 1 percent of the data back for validation
         validation_indices = self.random.sample(indices, k=int(min(NUMBER_OF_BATCHES_VALIDATION*BATCH_SIZE, size_rpb/10)))
         training_indices = [i for i in indices if i not in validation_indices]
+        self.validate(validation_indices, "before training")
         for episode in range(1, NUMBER_OF_BATCHES_TRAINING+1):
             # sample a mini batch
             nn_inputs, search_probabilities, outcomes = self.replay_buffer.sample(BATCH_SIZE, indices=training_indices)
@@ -78,12 +84,12 @@ class Agent():
             search_probabilities = torch.from_numpy(search_probabilities).float().to(DEVICE)
             outcomes = torch.from_numpy(outcomes).float().to(DEVICE)
             # compute output of network
-            values, move_probabilities = self.network.forward(input_tensors, self.player)
+            values, move_probabilities = self.network.forward(input_tensors)
             values = values.squeeze()
             # compute loss
             value_loss = ((values - outcomes) ** 2).mean()
-            policy_loss = -(search_probabilities * torch.log(move_probabilities)).mean()
-            loss = value_loss + policy_loss
+            policy_loss = self.policy_loss(search_probabilities, move_probabilities)
+            loss = value_loss + WEIGHT_POLICY_LOSS*policy_loss
             total_value_loss += value_loss.item()
             total_policy_loss += policy_loss.item()
             # train
@@ -92,11 +98,6 @@ class Agent():
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if episode == 1:
-                print(
-                    'First episode \t average value loss: {} \t average policy loss: {}'.format(
-                        total_value_loss / episode
-                        , total_policy_loss / episode))
             print(
                 '\r\t# batches trained {} ( out of {}) \t time for training: {} seconds \t average value loss: {} \t average policy loss: {}'.format(
                     episode,
@@ -108,9 +109,9 @@ class Agent():
             '\r\tTraining completed \t time for training: {} seconds \t average value loss: {} \t average policy loss: {}'.format(
                 (time.time() - start_time), total_value_loss / NUMBER_OF_BATCHES_TRAINING
             , total_policy_loss / NUMBER_OF_BATCHES_TRAINING))
-        self.validate(validation_indices)
+        self.validate(validation_indices, "after training")
 
-    def validate(self, validation_indices):
+    def validate(self, validation_indices, string):
         start_time = time.time()
         # here we do not sample, instead we take everything from the held out data
         nn_inputs_numpy, search_probabilities_numpy, outcomes_numpy = self.replay_buffer.sample(len(validation_indices), indices=validation_indices)
@@ -124,14 +125,14 @@ class Agent():
             search_probabilities = torch.from_numpy(search_probabilities_numpy[i*slice_len:(i+1)*slice_len]).float().to(DEVICE)
             outcomes = torch.from_numpy(outcomes_numpy[i*slice_len:(i+1)*slice_len]).float().to(DEVICE)
             # compute output of network
-            values, move_probabilities = self.network.forward(input_tensors, self.player)
+            values, move_probabilities = self.network.forward(input_tensors)
             values = values.squeeze()
             # compute loss
             value_loss += ((values - outcomes) ** 2).mean().item()
-            policy_loss += -(search_probabilities * torch.log(move_probabilities)).mean().item()
+            policy_loss += self.policy_loss(search_probabilities, move_probabilities).item()
         print(
-            '\r\tValidation completed \t time for validation: {} seconds \t average value loss: {} \t average policy loss: {}'.format(
-                (time.time() - start_time), value_loss/NUMBER_OF_BATCHES_VALIDATION , policy_loss/NUMBER_OF_BATCHES_VALIDATION ))
+            '\r\tValidation {} completed \t time for validation: {} seconds \t average value loss: {} \t average policy loss: {}'.format(
+                string,(time.time() - start_time), value_loss/NUMBER_OF_BATCHES_VALIDATION , policy_loss/NUMBER_OF_BATCHES_VALIDATION ))
 
     def save(self, version):
         self.network.save_model(self.version)
@@ -143,3 +144,7 @@ class Agent():
         if episode * BATCH_SIZE < 600000:
             return 0.001
         return 0.0001
+
+    def policy_loss(self, search_probabilities, move_probabilities):
+        return -(search_probabilities * torch.log(move_probabilities)).mean(axis=0).sum()
+        # return ((search_probabilities - move_probabilities)**2).mean(axis=0).sum()
