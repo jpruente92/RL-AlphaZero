@@ -1,13 +1,16 @@
 import math
-from functools import reduce
+import random
 
-from helper import prepare_nn_input
-from hyperparameters import *
-import numpy as np
+from constants.hyper_parameters import *
 
 
-class Node():
-    def __init__(self, game, player, crnt_player_before_state):
+class Node:
+    def __init__(
+            self,
+            game,
+            player,
+            crnt_player_before_state):
+
         self.visit_count = 0
         self.sum_of_observed_values = 0  # values exactly like in the game, changes according to the player are just made in the uct score
         self.game = game
@@ -40,7 +43,7 @@ class Node():
             return
 
         # otherwise expand the node
-        for action in self.game.feasible_actions:
+        for action in self.game.FEASIBLE_ACTIONS:
             game_of_child = self.game.clone()
             game_of_child.step_if_feasible(action, -self.crnt_player_before_state)
             child = Node(game_of_child, self.player, -self.crnt_player_before_state)
@@ -50,7 +53,7 @@ class Node():
             winner = game_of_child.winner
             if winner is None:
                 # tie
-                if len(game_of_child.feasible_actions) == 0:
+                if len(game_of_child.FEASIBLE_ACTIONS) == 0:
                     child.terminated = True
                     value = 0
                     game_of_child.winner = 0
@@ -77,15 +80,15 @@ class Node():
 
     def simulate(self, game, crnt_player, neural_network=None):
         if neural_network is None:
-            while len(game.feasible_actions) > 0:
-                game.step_if_feasible(game.random.choice(game.feasible_actions), crnt_player)
+            while len(game.FEASIBLE_ACTIONS) > 0:
+                game.step_if_feasible(random.choice(game.FEASIBLE_ACTIONS), crnt_player)
                 crnt_player *= -1
                 if game.winner is not None:
                     return game.winner
             # if the algorithm arrives here, no feasible actions are available -> tie
             return 0
         else:
-            nn_input = prepare_nn_input(game.all_board_states, game.state_shape, crnt_player)
+            nn_input = prepare_nn_input(game.all_board_states, game.STATE_SHAPE, crnt_player)
             nn_input = torch.from_numpy(nn_input).float().to(DEVICE)
             neural_network.eval()
             with torch.no_grad():
@@ -96,7 +99,7 @@ class Node():
     def uct_score(self, child, neural_network=None):
         move_prob_network = 1
         if neural_network is not None:
-            nn_input = prepare_nn_input(child.father.game.all_board_states, child.game.state_shape,
+            nn_input = prepare_nn_input(child.father.GAME.all_board_states, child.GAME.STATE_SHAPE,
                                         child.crnt_player_before_state)
             nn_input = torch.from_numpy(nn_input).float().to(DEVICE)
             neural_network.eval()

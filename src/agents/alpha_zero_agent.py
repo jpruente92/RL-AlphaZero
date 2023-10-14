@@ -1,70 +1,67 @@
-import random
-import time
+from typing import Literal
+
+from agents.mcts_agent import MCTSAgent
+from alpha_zero.neuralnetwork import NeuralNetwork
+from alpha_zero.replay_buffer import ReplayBuffer
 
 
-from mcts import MCTS
-from neural_network import Neural_network
-from replay_buffer import Replay_buffer
+class AlphaZeroAgent(MCTSAgent):
 
-from hyperparameters import *
+    def __init__(
+            self,
+            player_number: Literal[-1, 1],
+            version=0,
+            seconds_per_move=1,
+            game=None,
+            replay_buffer=None,
+            name_for_saving=None
+    ):
+        super().__init__(
+            name=f"AlphaZero_{version}",
+            player_number=player_number,
+            game=game,
+            seconds_per_move=seconds_per_move
+        )
 
-from icecream import ic
+        self.VERSION = version
+        self.NAME_FOR_SAVING = name_for_saving
 
+        self.NETWORK = NeuralNetwork(
+            version,
+            game.NO_ACTIONS,
+            game.STATE_SHAPE,
+            name_for_saving
+        )
+        self.MCTS.set_network(self.NETWORK)
 
-class Agent():
-    def __init__(self, type, player, seed, version=0, scnds_per_move=1, game=None, replay_buffer=None,
-                 name_for_saving=None):
-        self.type = type
-        self.player = player
-        self.game = game
-        self.name = type
-        self.random = random
-        self.random.seed(seed)
-        if type == "alphaZero":
-            self.name += "_{}_".format(version)
-        if type == "mcts":
-            self.mcts = MCTS(scnds_per_move, game, player, seed=seed)
-        if type == "alphaZero":
-            self.seed = seed
-            self.network = Neural_network(version, game.nr_actions, game.state_shape, name_for_saving)
-            self.replay_buffer = replay_buffer
-            if self.replay_buffer is None:
-                self.replay_buffer = Replay_buffer(version, name_for_saving, seed)
-            self.version = version
-            self.mcts = MCTS(scnds_per_move=scnds_per_move, game=game, player=self.player,seed=seed, network=self.network)
-            self.scnds_per_move = scnds_per_move
-            self.name_for_saving = name_for_saving
+        self.REPLAY_BUFFER = replay_buffer
+        if self.REPLAY_BUFFER is None:
+            self.REPLAY_BUFFER = ReplayBuffer(version, name_for_saving)
 
+    # region Public Methods
 
-    def set_player(self, player):
-        self.player = player
-        self.mcts.player = player
-
-    def reset_mcts(self):
-        self.mcts.reset()
-
-    def clone(self, player):
-        clone = Agent(type=self.type, player=player, seed=self.seed, version=self.version,
-                      scnds_per_move=self.scnds_per_move, game=self.game,
-                      replay_buffer=self.replay_buffer, name_for_saving=self.name_for_saving)
-        # clone shall have its own mcts
-        clone.mcts = MCTS(clone.scnds_per_move, clone.game, player, clone.seed, clone.network)
+    def clone(self):
+        clone = AlphaZeroAgent(
+            player_number=self.PLAYER_NUMBER,
+            version=self.VERSION,
+            seconds_per_move=self.SECONDS_PER_MOVE,
+            game=self.GAME,
+            replay_buffer=self.REPLAY_BUFFER,
+            name_for_saving=self.NAME_FOR_SAVING
+        )
         return clone
 
-    def compute_action(self, game, training=False):
-        game.user_action = None
-        if self.type == "random":
-            return game.random.choice(game.feasible_actions)
-        elif self.type == "user":
-            while game.user_action is None:
-                game.gui.refresh_picture(game.board)
-                time.sleep(0.01)
-            action = game.user_action
-            game.user_action = None
-            return action
-        elif self.type == "mcts" or self.type == "alphaZero":
-            return self.mcts.step(training)
+    def compute_action(
+            self,
+            training=False
+    ) -> int:
+        self.GAME.user_action = None
+        return self.MCTS.step(training)
 
+    # endregion Public Methods
+
+    # todo: refactor from here
+    # region Training
     def train(self):
         start_time = time.time()
         total_value_loss = 0
@@ -73,10 +70,11 @@ class Agent():
         size_rpb = len(self.replay_buffer.outcomes)
         indices = [i for i in range(size_rpb)]
         # hold at most 1 percent of the data back for validation
-        validation_indices = self.random.sample(indices, k=int(min(NUMBER_OF_BATCHES_VALIDATION*BATCH_SIZE, size_rpb/10)))
+        validation_indices = self.random.sample(indices,
+                                                k=int(min(NUMBER_OF_BATCHES_VALIDATION * BATCH_SIZE, size_rpb / 10)))
         training_indices = [i for i in indices if i not in validation_indices]
         self.validate(validation_indices, "before training")
-        for episode in range(1, NUMBER_OF_BATCHES_TRAINING+1):
+        for episode in range(1, NUMBER_OF_BATCHES_TRAINING + 1):
             # sample a mini batch
             nn_inputs, search_probabilities, outcomes = self.replay_buffer.sample(BATCH_SIZE, indices=training_indices)
             # compute tensors and send to device
@@ -89,7 +87,7 @@ class Agent():
             # compute loss
             value_loss = ((values - outcomes) ** 2).mean()
             policy_loss = self.policy_loss(search_probabilities, move_probabilities)
-            loss = value_loss + WEIGHT_POLICY_LOSS*policy_loss
+            loss = value_loss + WEIGHT_POLICY_LOSS * policy_loss
             total_value_loss += value_loss.item()
             total_policy_loss += policy_loss.item()
             # train
@@ -104,26 +102,28 @@ class Agent():
                     NUMBER_OF_BATCHES_TRAINING,
                     (time.time() - start_time),
                     total_value_loss / episode
-                , total_policy_loss / episode), end="")
+                    , total_policy_loss / episode), end="")
         print(
             '\r\tTraining completed \t time for training: {} seconds \t average value loss: {} \t average policy loss: {}'.format(
                 (time.time() - start_time), total_value_loss / NUMBER_OF_BATCHES_TRAINING
-            , total_policy_loss / NUMBER_OF_BATCHES_TRAINING))
+                , total_policy_loss / NUMBER_OF_BATCHES_TRAINING))
         self.validate(validation_indices, "after training")
 
     def validate(self, validation_indices, string):
         start_time = time.time()
         # here we do not sample, instead we take everything from the held out data
-        nn_inputs_numpy, search_probabilities_numpy, outcomes_numpy = self.replay_buffer.sample(len(validation_indices), indices=validation_indices)
+        nn_inputs_numpy, search_probabilities_numpy, outcomes_numpy = self.replay_buffer.sample(len(validation_indices),
+                                                                                                indices=validation_indices)
         value_loss = 0
         policy_loss = 0
         # we cannot feed all the data at once into the neural network because of the gpu memory
-        slice_len = len(validation_indices)//NUMBER_OF_BATCHES_VALIDATION
+        slice_len = len(validation_indices) // NUMBER_OF_BATCHES_VALIDATION
         for i in range(NUMBER_OF_BATCHES_VALIDATION):
             # compute tensors of correct slices and send to device
-            input_tensors = torch.from_numpy(nn_inputs_numpy[i*slice_len:(i+1)*slice_len]).float().to(DEVICE)
-            search_probabilities = torch.from_numpy(search_probabilities_numpy[i*slice_len:(i+1)*slice_len]).float().to(DEVICE)
-            outcomes = torch.from_numpy(outcomes_numpy[i*slice_len:(i+1)*slice_len]).float().to(DEVICE)
+            input_tensors = torch.from_numpy(nn_inputs_numpy[i * slice_len:(i + 1) * slice_len]).float().to(DEVICE)
+            search_probabilities = torch.from_numpy(
+                search_probabilities_numpy[i * slice_len:(i + 1) * slice_len]).float().to(DEVICE)
+            outcomes = torch.from_numpy(outcomes_numpy[i * slice_len:(i + 1) * slice_len]).float().to(DEVICE)
             # compute output of network
             values, move_probabilities = self.network.forward(input_tensors)
             values = values.squeeze()
@@ -132,7 +132,8 @@ class Agent():
             policy_loss += self.policy_loss(search_probabilities, move_probabilities).item()
         print(
             '\r\tValidation {} completed \t time for validation: {} seconds \t average value loss: {} \t average policy loss: {}'.format(
-                string,(time.time() - start_time), value_loss/NUMBER_OF_BATCHES_VALIDATION , policy_loss/NUMBER_OF_BATCHES_VALIDATION ))
+                string, (time.time() - start_time), value_loss / NUMBER_OF_BATCHES_VALIDATION,
+                                                    policy_loss / NUMBER_OF_BATCHES_VALIDATION))
 
     def save(self, version):
         self.network.save_model(self.version)
@@ -148,3 +149,5 @@ class Agent():
     def policy_loss(self, search_probabilities, move_probabilities):
         return -(search_probabilities * torch.log(move_probabilities)).mean(axis=0).sum()
         # return ((search_probabilities - move_probabilities)**2).mean(axis=0).sum()
+
+    # endregion Training

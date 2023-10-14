@@ -16,12 +16,12 @@ class Gui(Tk):
     def __init__(self, game):
         self.game = game
         super(Gui, self).__init__()
-        self.title("Connect {}".format(game.n))
+        self.title("Connect {}".format(game.N))
         self.minsize(1000, 1000)
-        self.fontsize = 3*self.game.n
+        self.fontsize = 3*self.game.N
 
-        self.nr_rows = game.nr_rows
-        self.nr_columns = game.nr_cols
+        self.nr_rows = game.NO_ROWS
+        self.nr_columns = game.NO_COLUMNS
         self.width_field = self.nr_columns * width_square + (self.nr_columns + 1) * offset_square
         self.height_field = (self.nr_rows + 1) * width_square + (self.nr_rows + 2) * offset_square
 
@@ -37,7 +37,7 @@ class Gui(Tk):
         # self.attributes('-fullscreen', True)
         # self.bind("<Escape>", lambda event: self.attributes("-fullscreen", False))
 
-        self.update_field(game.board)
+        self.update_field(game.BOARD)
 
     def update_field(self, board):
 
@@ -77,7 +77,7 @@ class Gui(Tk):
                 winner = 2
             self.canvas.create_text((x + 0.5 * width_square, self.height_field - y - 0.5 * width_square),
                                     font=("Purisa", self.fontsize), text="The winner is player {}".format(winner), fill="black")
-        elif len(self.game.feasible_actions) == 0:
+        elif len(self.game.FEASIBLE_ACTIONS) == 0:
             middle = np.math.floor(self.nr_columns / 2)
             x = offset_square * (middle + 1) + width_square * middle
             y = offset_square * (self.nr_rows + 1) + width_square * self.nr_rows
@@ -91,17 +91,17 @@ class Gui(Tk):
 
     def leftclick(self, event):
         action = self.find_action_by_coordinates(event.x, event.y)
-        if action in self.game.feasible_actions:
+        if action in self.game.FEASIBLE_ACTIONS:
             self.game.user_action = action
 
     def find_action_by_coordinates(self, x, y):
         col = int(x/(width_square+offset_square))
         row = int((y-(width_square+offset_square))/(width_square+offset_square))
-        row = self.game.nr_rows-1-row
-        if self.game.gravity_on:
+        row = self.game.NO_ROWS - 1 - row
+        if self.game.GRAVITY_ON:
             return col
         else:
-            return int(row*self.game.nr_cols+col)
+            return int(row * self.game.NO_COLUMNS + col)
 
 
 

@@ -1,10 +1,8 @@
 from functools import reduce
 
-import torch
-import torchvision
 from torch import nn
 import torch.nn.functional as F
-from hyperparameters import *
+from constants.hyper_parameters import *
 
 
 class Residual_layer(nn.Module):
@@ -83,7 +81,7 @@ class Value_head(nn.Module):
         return torch.tanh(x)
 
 
-class Neural_network(nn.Module):
+class NeuralNetwork(nn.Module):
 
     def __init__(self, version, nr_actions, state_shape, name_for_saving):
         super().__init__()
@@ -98,6 +96,7 @@ class Neural_network(nn.Module):
 
         self.name_for_saving = name_for_saving
         if version >= 0 and name_for_saving is not None:
+            # todo: log error if not existing
             self.load_model("./neural_networks/{}_version_{}.pth".format(self.name_for_saving, version))
 
     def forward(self, input):
