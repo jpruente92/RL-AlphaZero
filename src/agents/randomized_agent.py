@@ -1,4 +1,5 @@
 import random
+from logging import Logger
 from typing import Literal, Optional
 
 from agents.base_agent import BaseAgent
@@ -9,11 +10,12 @@ class RandomizedAgent(BaseAgent):
 
     def __init__(
             self,
+            logger: Logger,
             player_number: Literal[-1, 1],
             game: TwoPlayerGame
 
     ):
-        super().__init__(name="Random", player_number=player_number, game=game)
+        super().__init__(logger = logger, name="Random", player_number=player_number, game=game)
 
     def compute_action(
             self,

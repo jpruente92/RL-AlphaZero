@@ -1,6 +1,7 @@
 import copy
 import random
 import time
+from logging import Logger
 from multiprocessing import Pool
 
 import numpy as np
@@ -93,10 +94,12 @@ class AlphaZero:
 
     def __init__(self,
                  game: TwoPlayerGame,
-                 name_for_saving: str
+                 name_for_saving: str,
+                 logger: Logger
                  ):
         self.GAME = game
         self.NAME_FOR_SAVING = name_for_saving
+        self.LOGGER = logger
 
     def start_training_pipeline(self, start_version):
         agent = AlphaZeroAgent(
@@ -129,6 +132,8 @@ class AlphaZero:
         start_time = time.time()
         agent_2 = self._prepare_second_agent(agent_1)
         agents = [agent_1, agent_2]
+        for agent in agents:
+            agent.MCTS.set_training_mode_on()
 
         for episode in range(1, NUMBER_GAMES_PER_SELF_PLAY + 1):
             self._reset_game_and_agents(agent_1, agent_2)
@@ -141,7 +146,7 @@ class AlphaZero:
                 if len(self.GAME.FEASIBLE_ACTIONS) == 0:
                     self.GAME.winner = 0
                     break
-                action = current_agent.compute_action(training=True)
+                action = current_agent.compute_action()
                 experience_list.append(self._create_experience(current_agent=current_agent))
                 self.GAME.step_if_feasible(action, current_agent.PLAYER_NUMBER)
                 current_agent = agent_1 if current_agent is agent_2 else agent_2
@@ -153,6 +158,8 @@ class AlphaZero:
                   f"\t size replay buffer: {len(agent_1.REPLAY_BUFFER)}",
                   end="")
         agent_1.REPLAY_BUFFER.consistency_check()
+        for agent in agents:
+            agent.MCTS.set_training_mode_off()
 
     def _store_results_in_replay_buffer(
             self,

@@ -131,6 +131,9 @@ class TwoPlayerGame:
 
     # region Abstract Methods
 
+    def clone(self):
+        raise NotImplementedError
+
     def _action_to_field(
             self,
             action: int

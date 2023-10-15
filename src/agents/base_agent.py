@@ -1,8 +1,16 @@
+from logging import Logger
 from typing import Literal
 
 
 class BaseAgent:
-    def __init__(self, name: str, player_number: Literal[-1, 1], game):
+    def __init__(
+            self,
+            logger: Logger,
+            name: str,
+            player_number: Literal[-1, 1],
+            game
+    ):
+        self.LOGGER = logger
         self.NAME = name
         self.PLAYER_NUMBER = player_number
         self.GAME = game
@@ -12,8 +20,7 @@ class BaseAgent:
 
     # region Abstract Methods
     def compute_action(
-            self,
-            training: bool = False
+            self
     ) -> int:
         raise NotImplementedError
 

@@ -1,8 +1,6 @@
 import copy
 from typing import Literal
 
-import numpy as np
-
 from game_logic.two_player_game import TwoPlayerGame
 
 

@@ -3,3 +3,6 @@ txt.txt
 
 neural_networks
 replay_buffers
+.idea
+logs
+profiles

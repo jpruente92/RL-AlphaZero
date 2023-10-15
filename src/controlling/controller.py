@@ -30,7 +30,11 @@ class Controller:
             alpha_zero_version=alpha_zero_version,
             seconds_per_move=seconds_per_move
         )
-        agent_2 = UserAgent(player_number=1, game=self.GAME)
+        agent_2 = UserAgent(
+            logger=self.LOGGER,
+            player_number=1,
+            game=self.GAME
+        )
         self.GAME.start_game(agent_1, agent_2, 1)
 
     @profile
@@ -109,19 +113,23 @@ class Controller:
         self.GAME.set_gui_on()
         if opponent_type == OpponentType.USER:
             agent_1 = UserAgent(
+                logger=self.LOGGER,
                 player_number=-1,
                 game=self.GAME)
         elif opponent_type == OpponentType.RANDOM:
             agent_1 = RandomizedAgent(
+                logger=self.LOGGER,
                 player_number=-1,
                 game=self.GAME)
         elif opponent_type == OpponentType.MONTE_CARLO_TREE_SEARCH:
             agent_1 = MCTSAgent(
+                logger=self.LOGGER,
                 player_number=-1,
                 game=self.GAME,
                 seconds_per_move=seconds_per_move)
         elif opponent_type == OpponentType.ALPHA_ZERO:
             agent_1 = AlphaZeroAgent(
+                logger=self.LOGGER,
                 player_number=-1,
                 game=self.GAME,
                 version=alpha_zero_version,

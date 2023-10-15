@@ -1,14 +1,17 @@
+from logging import Logger
 from typing import Literal
 
-from agents.mcts_agent import MCTSAgent
+from agents.base_agent import BaseAgent
 from alpha_zero.neuralnetwork import NeuralNetwork
 from alpha_zero.replay_buffer import ReplayBuffer
+from monte_carlo_tree_search.mcts_with_nn import MCTSWithNeuralNetwork
 
 
-class AlphaZeroAgent(MCTSAgent):
+class AlphaZeroAgent(BaseAgent):
 
     def __init__(
             self,
+            logger: Logger,
             player_number: Literal[-1, 1],
             version=0,
             seconds_per_move=1,
@@ -17,14 +20,13 @@ class AlphaZeroAgent(MCTSAgent):
             name_for_saving=None
     ):
         super().__init__(
+            logger=logger,
             name=f"AlphaZero_{version}",
             player_number=player_number,
-            game=game,
-            seconds_per_move=seconds_per_move
+            game=game
         )
 
-        self.VERSION = version
-        self.NAME_FOR_SAVING = name_for_saving
+        self.SECONDS_PER_MOVE = seconds_per_move
 
         self.NETWORK = NeuralNetwork(
             version,
@@ -32,13 +34,32 @@ class AlphaZeroAgent(MCTSAgent):
             game.STATE_SHAPE,
             name_for_saving
         )
-        self.MCTS.set_network(self.NETWORK)
+        self.MCTS = MCTSWithNeuralNetwork(
+            logger=logger,
+            seconds_per_move=self.SECONDS_PER_MOVE,
+            game=self.GAME,
+            player_number=self.PLAYER_NUMBER,
+            neural_network=self.NETWORK
+        )
+
+        self.VERSION = version
+        self.NAME_FOR_SAVING = name_for_saving
 
         self.REPLAY_BUFFER = replay_buffer
         if self.REPLAY_BUFFER is None:
-            self.REPLAY_BUFFER = ReplayBuffer(version, name_for_saving)
+            self.REPLAY_BUFFER = ReplayBuffer(name_for_saving)
 
     # region Public Methods
+
+    def set_player(self, player_number: Literal[-1, 1]):
+        self.PLAYER_NUMBER = player_number
+        self.MCTS.PLAYER_NUMBER = player_number
+
+    def compute_action(
+            self
+    ) -> int:
+        self.GAME.user_action = None
+        return self.MCTS.step()
 
     def clone(self):
         clone = AlphaZeroAgent(
@@ -50,13 +71,6 @@ class AlphaZeroAgent(MCTSAgent):
             name_for_saving=self.NAME_FOR_SAVING
         )
         return clone
-
-    def compute_action(
-            self,
-            training=False
-    ) -> int:
-        self.GAME.user_action = None
-        return self.MCTS.step(training)
 
     # endregion Public Methods
 

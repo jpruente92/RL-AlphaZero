@@ -7,7 +7,7 @@ if __name__ == '__main__':
     # todo: new conda env
 
     # todo: refactor mcts
-    # todo: refactor node
+    # todo: refactoring: does game has to be stored everywhere? -> in Node probably yes
     # todo: refactor replay buffer
     # todo: refactor alpha zero agent
     # todo: refactor alpha zero algorithm
