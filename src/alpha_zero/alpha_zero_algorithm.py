@@ -5,7 +5,6 @@ from logging import Logger
 from multiprocessing import Pool
 
 import numpy as np
-from pathos.multiprocessing import ProcessingPool as Pool
 
 from agents.alpha_zero_agent import AlphaZeroAgent
 from alpha_zero.replay_buffer_experience import ReplayBufferExperience
