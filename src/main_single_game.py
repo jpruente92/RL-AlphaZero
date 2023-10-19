@@ -20,4 +20,4 @@ if __name__ == '__main__':
     # todo: gui errors
     # todo: why does the gui have to be refreshed in a loop
 
-    controller.play_game(opponent_type=OpponentType.MONTE_CARLO_TREE_SEARCH, alpha_zero_version=1)
+    controller.play_game(opponent_type=OpponentType.MONTE_CARLO_TREE_SEARCH, alpha_zero_version=1, seconds_per_move=1)

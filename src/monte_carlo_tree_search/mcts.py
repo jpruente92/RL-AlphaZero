@@ -14,7 +14,7 @@ class MCTS:
             self,
             seconds_per_move: int,
             game: TwoPlayerGame,
-            player_number: int,
+            player_number: Literal[-1, 1],
             logger: Logger
     ):
         self.START_PLAYER = 1

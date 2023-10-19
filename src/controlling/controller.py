@@ -95,6 +95,23 @@ class Controller:
             )
         self.LOGGER.info("Game set to Connect 4")
 
+    def set_game_to_custom_connect_n(
+            self,
+            n: int,
+            no_rows: int,
+            no_columns: int,
+            gravity_on: bool
+    ):
+        self.GAME = \
+            ConnectN(
+                n=n,
+                no_rows=no_rows,
+                no_columns=no_columns,
+                gravity_on=gravity_on
+            )
+        self.LOGGER.info("Game set to Connect 4")
+
+
     # endregion Public Methods
 
     # region Private Methods

@@ -41,6 +41,11 @@ class NetworkManagerBase:
     def _create_network_from_scratch(self) -> NeuralNetworkTorch:
         raise NotImplementedError
 
+    def _load_model(self, path: str):
+        raise NotImplementedError
+
+    # endregion Abstract Methods
+
     def _load_network_data_from_file(self, name_for_saving, version) -> None:
         file_path = os.path.join(NEURAL_NETWORK_DIR_PATH, "torch", f"{name_for_saving}_version_{version}.pth")
         if version >= 0 and name_for_saving is not None and os.path.exists(file_path):
@@ -48,11 +53,6 @@ class NetworkManagerBase:
         else:
             self.LOGGER.warning(f"Network {name_for_saving} version {version} could not be loaded! "
                                 f"Path= {os.path.abspath(file_path)}")
-
-    def _load_model(self, path: str):
-        raise NotImplementedError
-
-    # endregion Abstract Methods
 
     # region Input preparation
 
