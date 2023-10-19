@@ -56,24 +56,31 @@ class Tournament:
     def add_alpha_zero_agent(self, alpha_zero_version: int):
         self.AGENTS.append(
             AlphaZeroAgent(
+                logger=self.LOGGER,
                 player_number=-1,
                 game=self.GAME,
                 version=alpha_zero_version,
-                seconds_per_move=self.SECONDS_PER_MOVE))
+                seconds_per_move=self.SECONDS_PER_MOVE
+            )
+        )
 
     def add_mcts_agent(self):
         self.AGENTS.append(
             MCTSAgent(
+                logger=self.LOGGER,
                 player_number=-1,
                 game=self.GAME,
-                seconds_per_move=self.SECONDS_PER_MOVE)
+                seconds_per_move=self.SECONDS_PER_MOVE
+            )
         )
 
     def add_randomized_agent(self):
         self.AGENTS.append(
             RandomizedAgent(
+                logger=self.LOGGER,
                 player_number=-1,
-                game=self.GAME)
+                game=self.GAME
+            )
         )
 
     # endregion Public Method

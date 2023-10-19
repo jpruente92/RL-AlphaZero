@@ -6,6 +6,7 @@ from agents.mcts_agent import MCTSAgent
 from agents.randomized_agent import RandomizedAgent
 from agents.user_agent import UserAgent
 from alpha_zero.alpha_zero_algorithm import AlphaZero
+from constants.hyper_parameters import DEVICE
 from controlling.log_manager import LogManager
 from controlling.profiling import profile
 from controlling.tournament import Tournament
@@ -17,9 +18,10 @@ class Controller:
 
     def __init__(self, seed: Optional[int] = None):
         self.LOGGER = self._prepare_logger()
-
         self.GAME = None
 
+        self.LOGGER.info("Controller created")
+        self.LOGGER.debug(f"Device: {DEVICE}")
         self._set_seed(seed)
 
     # region Public Methods
@@ -49,9 +51,10 @@ class Controller:
             seconds_per_move=seconds_per_move
         )
 
-        tournament.add_alpha_zero_agent(alpha_zero_version=0)
-        tournament.add_alpha_zero_agent(alpha_zero_version=1)
+        # tournament.add_alpha_zero_agent(alpha_zero_version=0)
+        # tournament.add_alpha_zero_agent(alpha_zero_version=1)
         tournament.add_mcts_agent()
+        tournament.add_randomized_agent()
 
         tournament.start_tournament(no_games=no_games)
 

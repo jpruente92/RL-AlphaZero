@@ -2,7 +2,8 @@ from logging import Logger
 from typing import Literal
 
 from agents.base_agent import BaseAgent
-from alpha_zero.neuralnetwork import NeuralNetwork
+from game_logic.two_player_game import TwoPlayerGame
+from neural_network.neural_network_torch.network_manager_torch import NetworkManagerTorch
 from alpha_zero.replay_buffer import ReplayBuffer
 from monte_carlo_tree_search.mcts_with_nn import MCTSWithNeuralNetwork
 
@@ -12,12 +13,12 @@ class AlphaZeroAgent(BaseAgent):
     def __init__(
             self,
             logger: Logger,
+            game: TwoPlayerGame,
             player_number: Literal[-1, 1],
             version=0,
             seconds_per_move=1,
-            game=None,
             replay_buffer=None,
-            name_for_saving=None
+            name_for_saving="Connect_4"  # todo: make it dependent from the game
     ):
         super().__init__(
             logger=logger,
@@ -28,18 +29,19 @@ class AlphaZeroAgent(BaseAgent):
 
         self.SECONDS_PER_MOVE = seconds_per_move
 
-        self.NETWORK = NeuralNetwork(
-            version,
-            game.NO_ACTIONS,
-            game.STATE_SHAPE,
-            name_for_saving
+        self.NETWORK_MANAGER = NetworkManagerTorch(
+            logger=logger,
+            name_for_saving=name_for_saving,
+            version=version,
+            no_actions=game.NO_ACTIONS,
+            state_shape=game.STATE_SHAPE
         )
         self.MCTS = MCTSWithNeuralNetwork(
             logger=logger,
             seconds_per_move=self.SECONDS_PER_MOVE,
             game=self.GAME,
-            player_number=self.PLAYER_NUMBER,
-            neural_network=self.NETWORK
+            player_number=self.player_number,
+            network_manager=self.NETWORK_MANAGER
         )
 
         self.VERSION = version
@@ -52,7 +54,7 @@ class AlphaZeroAgent(BaseAgent):
     # region Public Methods
 
     def set_player(self, player_number: Literal[-1, 1]):
-        self.PLAYER_NUMBER = player_number
+        self.player_number = player_number
         self.MCTS.PLAYER_NUMBER = player_number
 
     def compute_action(
@@ -63,7 +65,7 @@ class AlphaZeroAgent(BaseAgent):
 
     def clone(self):
         clone = AlphaZeroAgent(
-            player_number=self.PLAYER_NUMBER,
+            player_number=self.player_number,
             version=self.VERSION,
             seconds_per_move=self.SECONDS_PER_MOVE,
             game=self.GAME,

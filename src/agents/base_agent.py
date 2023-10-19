@@ -12,11 +12,12 @@ class BaseAgent:
     ):
         self.LOGGER = logger
         self.NAME = name
-        self.PLAYER_NUMBER = player_number
         self.GAME = game
 
+        self.player_number = player_number
+
     def set_player(self, player_number: Literal[-1, 1]):
-        self.PLAYER_NUMBER = player_number
+        self.player_number = player_number
 
     # region Abstract Methods
     def compute_action(

@@ -18,7 +18,7 @@ WEIGHT_DECAY = 0.0001
 
 # network architecture
 NR_RESIDUAL_LAYERS = 19
-NR_BOARD_STATES_SAVED = 1
+NO_BOARD_STATES_SAVED = 1
 
 # replay buffer parameters
 BUFFER_SIZE = 500000

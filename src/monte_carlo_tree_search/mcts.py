@@ -32,9 +32,8 @@ class MCTS:
     def reset(self):
         self.current_root = None
 
-    def step(
-            self
-    ) -> int:
+    def step(self) -> int:
+
         self.total_number_moves += 1
         self._set_root_to_last_relevant_node()
         self._update_tree()
@@ -43,8 +42,8 @@ class MCTS:
     def log_tree(self) -> None:
         self.LOGGER.debug("TREE")
         original_root = self.current_root
-        while original_root.father is not None:
-            original_root = original_root.father
+        while original_root.FATHER is not None:
+            original_root = original_root.FATHER
         list_of_nodes: list = [original_root]
         max_depth = 0
         while len(list_of_nodes) > 0:
@@ -53,13 +52,13 @@ class MCTS:
             for child in node.children:
                 if child is not None:
                     list_of_nodes.insert(0, child)
-                    if node.depth > max_depth:
-                        max_depth = node.depth
-            for i in range(0, node.depth):
+                    if node.DEPTH > max_depth:
+                        max_depth = node.DEPTH
+            for i in range(0, node.DEPTH):
                 print("  ", end="")
             self.LOGGER.debug(
-                f"{node.action_before_state} {node.CURRENT_PLAYER_NUMBER_BEFORE_STATE}"
-                f" {node.sum_of_observed_values} {node.visit_count, node.depth}")
+                f"{node.ACTION_BEFORE_STATE} {node.CURRENT_PLAYER_NUMBER_BEFORE_STATE}"
+                f" {node.sum_of_observed_values} {node.visit_count, node.DEPTH}")
         self.LOGGER.debug(max_depth)
 
     # endregion Public Methods
@@ -87,53 +86,58 @@ class MCTS:
             current_node = self._find_child_with_highest_uct_score(current_node)
         return current_node
 
-    def _expand(self, node: Node):
-        # todo: split
+    # region Expand
 
-        # if the node is already terminated, it cannot be expanded
+    def _expand(self, node: Node):
+
         if node.terminated:
-            value = node.GAME.winner
-            node.visit_count += 1
-            node.sum_of_observed_values += value
-            self._back_propagate(node, value)
+            winner_value = node.GAME.winner
+            self._back_propagate(node, winner_value)
             return
 
-        # otherwise expand the node
         for action in node.GAME.FEASIBLE_ACTIONS:
-            game_of_child = node.GAME.clone()
-            game_of_child.step_if_feasible(action, -node.CURRENT_PLAYER_NUMBER_BEFORE_STATE)
-            child = Node(game_of_child, node.PLAYER_NUMBER, -node.CURRENT_PLAYER_NUMBER_BEFORE_STATE)
-
-            child.action_before_state = action
-            child.father = node
-            winner = game_of_child.winner
-            if winner is None:
-                # tie
-                if len(game_of_child.FEASIBLE_ACTIONS) == 0:
-                    child.terminated = True
-                    value = 0
-                    game_of_child.winner = 0
-                # game is not over
-                else:
-                    child.terminated = False
-                    # simulate til winner is found
-                    value = self._simulate(game_of_child.clone(), -child.CURRENT_PLAYER_NUMBER_BEFORE_STATE)
-            else:
-                value = winner
-                child.terminated = True
-            child.visit_count = 1
-            child.sum_of_observed_values = value
-            child.depth = node.depth + 1
+            child = self._create_child(action, node)
             node.children.append(child)
+            value = self._compute_winner_value(child)
             self._back_propagate(child, value)
 
-    def _back_propagate(self, node: Node, winner_value: Literal[-1, 0, 1]):
-        while node.father is not None:
-            node = node.father
-            node.visit_count += 1
-            node.sum_of_observed_values += winner_value
+    def _create_child(
+            self,
+            action: int,
+            node: Node
+    ) -> Node:
+        game_of_child = node.GAME.clone()
+        game_of_child.step_if_feasible(
+            action=action,
+            player_number=-node.CURRENT_PLAYER_NUMBER_BEFORE_STATE
+        )
+        child = Node(
+            game=game_of_child,
+            player_number=node.PLAYER_NUMBER,
+            current_player_number_before_state=-node.CURRENT_PLAYER_NUMBER_BEFORE_STATE,
+            action_before_state=action,
+            father=node,
+            depth=node.DEPTH + 1
+        )
 
-    def _simulate(self, game, current_player, neural_network=None):
+        return child
+
+    def _compute_winner_value(self, child: Node):
+        winner = child.GAME.winner
+        if winner is None:
+            if len(child.GAME.FEASIBLE_ACTIONS) == 0:
+                child.terminated = True
+                winner_value = 0
+                child.GAME.winner = 0
+            else:
+                child.terminated = False
+                winner_value = self._simulate(child.GAME.clone(), -child.CURRENT_PLAYER_NUMBER_BEFORE_STATE)
+        else:
+            winner_value = winner
+            child.terminated = True
+        return winner_value
+
+    def _simulate(self, game, current_player):
         while len(game.FEASIBLE_ACTIONS) > 0:
             game.step_if_feasible(random.choice(game.FEASIBLE_ACTIONS), current_player)
             current_player *= -1
@@ -141,6 +145,16 @@ class MCTS:
                 return game.winner
         # if the algorithm arrives here, no feasible actions are available -> tie
         return 0
+
+    def _back_propagate(self, node: Node, winner_value: Literal[-1, 0, 1]):
+        while node is not None:
+            node.visit_count += 1
+            node.sum_of_observed_values += winner_value
+            node = node.FATHER
+
+    # endregion Expand
+
+    # region UCT Score
 
     def _find_child_with_highest_uct_score(
             self,
@@ -160,15 +174,12 @@ class MCTS:
             node: Node
     ) -> float:
 
-        value_part_of_score = node.sum_of_observed_values / node.visit_count
-        value_part_of_score = self._adapt_value_of_uct_score(node, value_part_of_score)
+        value_part_of_score = self._compute_value_part_of_score(node)
         policy_part_of_score = self._compute_policy_part_of_score(node)
         return value_part_of_score + policy_part_of_score
 
-    def _compute_policy_part_of_score(self, node: Node):
-        return C * math.sqrt(math.log(node.father.visit_count) / node.visit_count)
-
-    def _adapt_value_of_uct_score(self, node, value_part_of_score):
+    def _compute_value_part_of_score(self, node):
+        value_part_of_score = node.sum_of_observed_values / node.visit_count
         # when the current player is not the player of the mcts we have to invert the value part
         # because we want to choose the action best for the opponent
         if node.CURRENT_PLAYER_NUMBER_BEFORE_STATE != self.PLAYER_NUMBER:
@@ -176,6 +187,11 @@ class MCTS:
         # the value part has to be multiplied with the player because we want to maximize his winning chance
         value_part_of_score *= self.PLAYER_NUMBER
         return value_part_of_score
+
+    def _compute_policy_part_of_score(self, node: Node):
+        return C * math.sqrt(math.log(node.FATHER.visit_count) / node.visit_count)
+
+    # endregion UCT Score
 
     def _best_action(
             self
@@ -189,17 +205,9 @@ class MCTS:
             # score = child.sum_of_observed_values / child.visit_count * self.PLAYER_NUMBER
             score = child.visit_count
             if score > best_score:
-                best_action = child.action_before_state
+                best_action = child.ACTION_BEFORE_STATE
                 best_score = score
         return best_action
-
-    def _sample_best_action_by_probability(self) -> int:
-        actions = []
-        probabilities = []
-        for child in self.current_root.children:
-            actions.append(child.action_before_state)
-            probabilities.append(child.visit_count / self.current_root.visit_count)
-        return random.choices(actions, weights=probabilities, k=1)[0]
 
     def _set_root_to_last_relevant_node(self):
         new_root = self._find_grand_child_with_same_board()
@@ -209,7 +217,10 @@ class MCTS:
             self.current_root = Node(
                 self.GAME,
                 player_number=self.PLAYER_NUMBER,
-                current_player_number_before_state=-self.PLAYER_NUMBER
+                current_player_number_before_state=-self.PLAYER_NUMBER,
+                action_before_state=-1,
+                father=None,
+                depth=0
             )
 
     def _find_grand_child_with_same_board(self):

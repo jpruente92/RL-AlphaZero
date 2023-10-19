@@ -6,8 +6,9 @@ if __name__ == '__main__':
     controller.set_game_to_connect_4()
     # todo: new conda env
 
-    # todo: refactor mcts
-    # todo: refactoring: does game has to be stored everywhere? -> in Node probably yes
+    # todo: muss agent das game verwalten?
+    # todo: refactor mcts with neural network
+    # todo: refactor neural network
     # todo: refactor replay buffer
     # todo: refactor alpha zero agent
     # todo: refactor alpha zero algorithm
@@ -19,12 +20,12 @@ if __name__ == '__main__':
     # todo: gui errors
     # todo: why does the gui have to be refreshed in a loop
 
-    controller.play_game(opponent_type=OpponentType.MONTE_CARLO_TREE_SEARCH, alpha_zero_version=1)
+    # controller.play_game(opponent_type=OpponentType.MONTE_CARLO_TREE_SEARCH, alpha_zero_version=1)
 
-    # controller.simulate_tournament(
-    #     no_games=25,
-    #     seconds_per_move=0.01
-    # )
+    controller.simulate_tournament(
+        no_games=25,
+        seconds_per_move=0.1
+    )
 
     # controller.train_alpha_zero(
     #     name_for_saving="Connect_4",

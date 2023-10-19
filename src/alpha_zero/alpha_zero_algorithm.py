@@ -25,69 +25,8 @@ from game_logic.two_player_game import TwoPlayerGame
 #     print("\r\tSelf play completed\t time for Self play: {} seconds".format((time.time() - start_time)))
 #
 #
-# # play a game and return true if agent wins
-# def play_game_return_winner(agent, agent_old, game):
-#     game.reset()
-#     agents = [agent, agent_old]
-#     crnt_agent = agents[game.random.randint(0, 1)]
-#     while game.winner is None:
-#         if len(game.feasible_actions) == 0:
-#             game.winner = 0
-#             break
-#         action = crnt_agent.compute_action(game, False)
-#         game.step_if_feasible(action, crnt_agent.player)
-#         crnt_agent = agent if crnt_agent is agent_old else agent_old
-#     return game.winner * agent.PLAYER_NUMBER
-#
-#
-# # evaluate version by playing vs previous version
-# def evaluate(agent, game):
-#     start_time = time.time()
-#     # play vs older version for evaluation
-#     # agent_old = Agent(type="alphaZero", player=-1, seed=agent.seed, version=agent.version - 1,
-#     #                   scnds_per_move=SCNDS_PER_MOVE_TRAINING,
-#     #                   game=game, name_for_saving=agent.name_for_saving)
-#     number_wins_new_agent = 0
-#     number_ties = 0
-#     for i in range(1, NUMBER_GAMES_VS_OLD_VERSION + 1):
-#         outcome = play_game_return_winner(agent, agent_old, game)
-#         if outcome == 1:
-#             number_wins_new_agent += 1
-#         elif outcome == 0:
-#             number_ties += 1
-#         win_prob = number_wins_new_agent / i * 100
-#         tie_prob = number_ties / i * 100
-#         print("\r\t{} games completed\t time so far: {} seconds\twin probability: {}%\t tie probability: {}%".format(i,
-#                                                                                                                      (
-#                                                                                                                              time.time() - start_time),
-#                                                                                                                      win_prob,
-#                                                                                                                      tie_prob),
-#               end="")
-#     print()
-#     # ties count as wins times a weight, otherwise it is too hard to be accepted because of the high tie probability in some games
-#     if number_wins_new_agent + number_ties * WEIGHT_FOR_TIES_IN_EVALUATION >= WIN_PERCENTAGE * NUMBER_GAMES_VS_OLD_VERSION / 100:
-#         # accept new version
-#         # reset replay buffer
-#         # agent.replay_buffer.reset()
-#         agent.save(agent.version)
-#
-#         print("version {} accepted with win probability: {}% and tie probability: {}%".format(agent.version,
-#                                                                                               number_wins_new_agent / NUMBER_GAMES_VS_OLD_VERSION * 100,
-#                                                                                               number_ties / NUMBER_GAMES_VS_OLD_VERSION * 100))
-#     else:
-#         print("version {} refused with win probability: {}% and tie probability: {}%".format(agent.version,
-#                                                                                              number_wins_new_agent / NUMBER_GAMES_VS_OLD_VERSION * 100,
-#                                                                                              number_ties / NUMBER_GAMES_VS_OLD_VERSION * 100))
-#         # go back to network of previous version but keep replay buffer
-#         agent.version = agent.version - 1
-#         agent.network = NeuralNetwork(version=agent.version, nr_actions=game.NR_ACTIONS, state_shape=game.state_shape,
-#                                       name_for_saving=agent.NAME_FOR_SAVING)
-#     # always save replaybuffer
-#     agent.replay_buffer.save_to_file(agent.version)
-#     print("\tEvaluation completed\t time for evaluation: {} seconds".format((time.time() - start_time)))
-#     print(
-#         "__________________________________________________________________________________________________________________________")
-#     return agent
+
+
 
 
 class AlphaZero:
@@ -103,6 +42,7 @@ class AlphaZero:
 
     def start_training_pipeline(self, start_version):
         agent = AlphaZeroAgent(
+            logger=self.LOGGER,
             player_number=1,
             version=start_version,
             seconds_per_move=SCNDS_PER_MOVE_TRAINING,
@@ -117,7 +57,7 @@ class AlphaZero:
             agent.train()
             agent.version = agent.version + 1
             # evaluate version
-            agent = evaluate(agent, game)
+            agent = self._evaluate_version(agent)
 
     def _self_play(self, agent):
         start_time = time.time()
@@ -176,7 +116,7 @@ class AlphaZero:
         """
         search_probabilities = self._compute_search_probabilities(current_agent)
         neural_network_input = self._prepare_nn_input(
-            copy.deepcopy(self.GAME.all_board_states), current_agent.PLAYER_NUMBER).squeeze(0)
+            copy.deepcopy(self.GAME.all_board_states), current_agent.player_number).squeeze(0)
         experience = ReplayBufferExperience(
             neural_network_input=neural_network_input,
             search_probabilities=search_probabilities,
@@ -202,51 +142,81 @@ class AlphaZero:
     def _compute_search_probabilities(self, agent: AlphaZeroAgent) -> np.array:
         search_probabilities = np.zeros(self.GAME.NO_ACTIONS)
         for child in agent.MCTS.current_root.children:
-            action = child.action_before_state
-            prob = child.visit_count / child.father.visit_count
+            action = child.ACTION_BEFORE_STATE
+            prob = child.visit_count / child.FATHER.visit_count
             search_probabilities[action] = prob
         return search_probabilities
 
-    def _prepare_nn_input(self, states_so_far, current_player):
-        list_of_3_dimensional_states = []
-        # last NR_BOARD_STATES_SAVED positions
-        if len(states_so_far) >= NR_BOARD_STATES_SAVED:
-            for state in states_so_far[-NR_BOARD_STATES_SAVED:]:
-                list_of_3_dimensional_states.append(self._state_to_3_dimensional_state(state, current_player))
-        else:
-            # fill with empty states (just zeros)
-            for i in range(NR_BOARD_STATES_SAVED - len(states_so_far)):
-                empty_state = np.zeros(self.GAME.STATE_SHAPE)
-                list_of_3_dimensional_states.append(self._state_to_3_dimensional_state(empty_state, current_player))
-            for state in states_so_far:
-                list_of_3_dimensional_states.append(self._state_to_3_dimensional_state(state, current_player))
-        nn_input = np.array(list_of_3_dimensional_states)
-        nn_input = nn_input.reshape(
-            -1,
-            3 * NR_BOARD_STATES_SAVED,
-            *self.GAME.STATE_SHAPE)
-        return nn_input
+    # evaluate version by playing vs previous version
+    def _evaluate_version(self, agent: AlphaZeroAgent):
+        """
+        evaluate version by playing vs previous version
+        """
+        start_time = time.time()
+        # play vs older version for evaluation
+        agent_old = AlphaZeroAgent(
+            logger=self.LOGGER,
+            player_number=1,
+            version=agent.version-1,
+            seconds_per_move=SCNDS_PER_MOVE_TRAINING,
+            game=self.GAME,
+            name_for_saving=self.NAME_FOR_SAVING
+        )
 
-    def _state_to_3_dimensional_state(self, state, current_player):
-        layer_1 = []
-        layer_2 = []
-        layer_3 = []
-        for i in range(len(state)):
-            layer_1.append([])
-            layer_2.append([])
-            layer_3.append([])
-            for j in range(len(state[i])):
-                if state[i][j] == 1:
-                    layer_1[i].append(1)
-                    layer_2[i].append(0)
-                if state[i][j] == -1:
-                    layer_1[i].append(0)
-                    layer_2[i].append(1)
-                if state[i][j] == 0:
-                    layer_1[i].append(0)
-                    layer_2[i].append(0)
-                if current_player == 1:
-                    layer_3[i].append(1)
-                else:
-                    layer_3[i].append(0)
-        return [layer_1, layer_2, layer_3]
+        number_wins_new_agent = 0
+        number_ties = 0
+        for i in range(1, NUMBER_GAMES_VS_OLD_VERSION + 1):
+            outcome = play_game_return_winner(agent, agent_old, self.GAME)
+            if outcome == 1:
+                number_wins_new_agent += 1
+            elif outcome == 0:
+                number_ties += 1
+            win_prob = number_wins_new_agent / i * 100
+            tie_prob = number_ties / i * 100
+            print("\r\t{} games completed\t time so far: {} seconds\twin probability: {}%\t tie probability: {}%".format(i,
+                                                                                                                         (
+                                                                                                                                 time.time() - start_time),
+                                                                                                                         win_prob,
+                                                                                                                         tie_prob),
+                  end="")
+        print()
+        # ties count as wins times a weight, otherwise it is too hard to be accepted because of the high tie probability in some games
+        if number_wins_new_agent + number_ties * WEIGHT_FOR_TIES_IN_EVALUATION >= WIN_PERCENTAGE * NUMBER_GAMES_VS_OLD_VERSION / 100:
+            # accept new version
+            # reset replay buffer
+            # agent.replay_buffer.reset()
+            agent.save(agent.version)
+
+            print("version {} accepted with win probability: {}% and tie probability: {}%".format(agent.version,
+                                                                                                  number_wins_new_agent / NUMBER_GAMES_VS_OLD_VERSION * 100,
+                                                                                                  number_ties / NUMBER_GAMES_VS_OLD_VERSION * 100))
+        else:
+            print("version {} refused with win probability: {}% and tie probability: {}%".format(agent.version,
+                                                                                                 number_wins_new_agent / NUMBER_GAMES_VS_OLD_VERSION * 100,
+                                                                                                 number_ties / NUMBER_GAMES_VS_OLD_VERSION * 100))
+            # go back to network of previous version but keep replay buffer
+            agent.version = agent.version - 1
+            agent.network = NeuralNetwork(version=agent.version, nr_actions=self.GAME.NR_ACTIONS, state_shape=self.GAME.state_shape,
+                                          name_for_saving=agent.NAME_FOR_SAVING)
+        # always save replaybuffer
+        agent.REPLAY_BUFFER.save_to_file(agent.version)
+        print("\tEvaluation completed\t time for evaluation: {} seconds".format((time.time() - start_time)))
+        print(
+            "__________________________________________________________________________________________________________________________")
+        return agent
+
+    # # play a game and return true if agent wins
+    def play_game_return_winner(agent, agent_old, game):
+        game.reset()
+        agents = [agent, agent_old]
+        crnt_agent = agents[game.random.randint(0, 1)]
+        while game.winner is None:
+            if len(game.feasible_actions) == 0:
+                game.winner = 0
+                break
+            action = crnt_agent.compute_action(game, False)
+            game.step_if_feasible(action, crnt_agent.player)
+            crnt_agent = agent if crnt_agent is agent_old else agent_old
+        return game.winner * agent.PLAYER_NUMBER
+
+

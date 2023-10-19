@@ -103,7 +103,7 @@ class TwoPlayerGame:
                 self.winner = 0
                 break
             action = current_agent.compute_action()
-            self.step_if_feasible(action, current_agent.PLAYER_NUMBER)
+            self.step_if_feasible(action, current_agent.player_number)
             current_agent = agent_1 if current_agent is agent_2 else agent_2
 
     def _field_is_free(
