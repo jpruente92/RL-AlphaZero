@@ -2,7 +2,6 @@ import copy
 import random
 import time
 from logging import Logger
-from multiprocessing import Pool
 
 import numpy as np
 

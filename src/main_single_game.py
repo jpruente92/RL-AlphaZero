@@ -4,8 +4,8 @@ from enums.opponent_type import OpponentType
 if __name__ == '__main__':
     controller = Controller()
     controller.set_game_to_connect_4()
-    # todo: new conda env
 
+    # todo: check why random wins
     # todo: muss agent das game verwalten?
     # todo: refactor mcts with neural network
     # todo: refactor neural network
@@ -20,14 +20,4 @@ if __name__ == '__main__':
     # todo: gui errors
     # todo: why does the gui have to be refreshed in a loop
 
-    # controller.play_game(opponent_type=OpponentType.MONTE_CARLO_TREE_SEARCH, alpha_zero_version=1)
-
-    controller.simulate_tournament(
-        no_games=25,
-        seconds_per_move=0.1
-    )
-
-    # controller.train_alpha_zero(
-    #     name_for_saving="Connect_4",
-    #     start_version=1
-    # )
+    controller.play_game(opponent_type=OpponentType.MONTE_CARLO_TREE_SEARCH, alpha_zero_version=1)
