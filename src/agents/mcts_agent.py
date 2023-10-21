@@ -25,8 +25,8 @@ class MCTSAgent(BaseAgent):
         )
 
     def set_player(self, player_number: Literal[-1, 1]):
-        self.PLAYER_NUMBER = player_number
-        self.MCTS.PLAYER_NUMBER = player_number
+        self.player_number = player_number
+        self.MCTS.player_number = player_number
 
     def compute_action(
             self

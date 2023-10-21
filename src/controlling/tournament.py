@@ -13,16 +13,25 @@ class Tournament:
             self,
             logger: Logger,
             game: TwoPlayerGame,
-            seconds_per_move=1
+            seconds_per_move=1,
+            with_gui=False
+
     ):
         self.LOGGER = logger
         self.GAME = game
         self.SECONDS_PER_MOVE = seconds_per_move
+        self.WITH_GUI = with_gui
         self.AGENTS = []
 
     # region Public Method
-    def start_tournament(self, no_games: int):
-        self.GAME.set_gui_off()
+    def start_tournament(
+            self,
+            no_games: int
+    ):
+        if self.WITH_GUI:
+            self.GAME.set_gui_on()
+        else:
+            self.GAME.set_gui_off()
 
         self.LOGGER.info("Starting Tournament")
         number_by_index_first_index_second_outcome = defaultdict(lambda: 0)
@@ -74,12 +83,16 @@ class Tournament:
             )
         )
 
-    def add_randomized_agent(self):
+    def add_randomized_agent(
+            self,
+            with_gui: bool
+    ) -> None:
         self.AGENTS.append(
             RandomizedAgent(
                 logger=self.LOGGER,
                 player_number=-1,
-                game=self.GAME
+                game=self.GAME,
+                sleep_time_after_move=1 if with_gui else 0
             )
         )
 

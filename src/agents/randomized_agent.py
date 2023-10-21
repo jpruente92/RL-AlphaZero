@@ -1,4 +1,5 @@
 import random
+import time
 from logging import Logger
 from typing import Literal, Optional
 
@@ -12,13 +13,16 @@ class RandomizedAgent(BaseAgent):
             self,
             logger: Logger,
             player_number: Literal[-1, 1],
-            game: TwoPlayerGame
-
+            game: TwoPlayerGame,
+            sleep_time_after_move: int = 0
     ):
-        super().__init__(logger = logger, name="Random", player_number=player_number, game=game)
+        self.SLEEP_TIME_AFTER_MOVE = sleep_time_after_move
+
+        super().__init__(logger=logger, name="Random", player_number=player_number, game=game)
 
     def compute_action(
             self,
             training: bool = False
     ) -> int:
+        time.sleep(self.SLEEP_TIME_AFTER_MOVE)
         return random.choice(self.GAME.FEASIBLE_ACTIONS)

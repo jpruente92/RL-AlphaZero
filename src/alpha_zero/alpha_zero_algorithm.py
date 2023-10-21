@@ -86,7 +86,7 @@ class AlphaZero:
                     break
                 action = current_agent.compute_action()
                 experience_list.append(self._create_experience(current_agent=current_agent))
-                self.GAME.step_if_feasible(action, current_agent.PLAYER_NUMBER)
+                self.GAME.step_if_feasible(action, current_agent.player_number)
                 current_agent = agent_1 if current_agent is agent_2 else agent_2
 
             self._store_results_in_replay_buffer(agent=agent_1, experience_list=experience_list)
@@ -215,6 +215,6 @@ class AlphaZero:
             action = crnt_agent.compute_action(game, False)
             game.step_if_feasible(action, crnt_agent.player)
             crnt_agent = agent if crnt_agent is agent_old else agent_old
-        return game.winner * agent.PLAYER_NUMBER
+        return game.winner * agent.player_number
 
 

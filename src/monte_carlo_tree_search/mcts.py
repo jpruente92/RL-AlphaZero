@@ -20,7 +20,7 @@ class MCTS:
         self.START_PLAYER = 1
         self.SECONDS_PER_MOVE = seconds_per_move
         self.GAME = game
-        self.PLAYER_NUMBER = player_number
+        self.player_number = player_number
         self.LOGGER = logger
 
         self.total_number_updates = 0
@@ -182,10 +182,10 @@ class MCTS:
         value_part_of_score = node.sum_of_observed_values / node.visit_count
         # when the current player is not the player of the mcts we have to invert the value part
         # because we want to choose the action best for the opponent
-        if node.CURRENT_PLAYER_NUMBER_BEFORE_STATE != self.PLAYER_NUMBER:
+        if node.CURRENT_PLAYER_NUMBER_BEFORE_STATE != self.player_number:
             value_part_of_score *= -1
         # the value part has to be multiplied with the player because we want to maximize his winning chance
-        value_part_of_score *= self.PLAYER_NUMBER
+        value_part_of_score *= self.player_number
         return value_part_of_score
 
     def _compute_policy_part_of_score(self, node: Node):
@@ -216,8 +216,8 @@ class MCTS:
         else:
             self.current_root = Node(
                 self.GAME,
-                player_number=self.PLAYER_NUMBER,
-                current_player_number_before_state=-self.PLAYER_NUMBER,
+                player_number=self.player_number,
+                current_player_number_before_state=-self.player_number,
                 action_before_state=-1,
                 father=None,
                 depth=0

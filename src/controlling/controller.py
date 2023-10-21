@@ -43,20 +43,24 @@ class Controller:
     def simulate_tournament(
             self,
             no_games=1,
-            seconds_per_move=1
+            seconds_per_move=1,
+            with_gui=False
     ) -> None:
         tournament = Tournament(
             logger=self.LOGGER,
             game=self.GAME,
-            seconds_per_move=seconds_per_move
+            seconds_per_move=seconds_per_move,
+            with_gui=with_gui
         )
 
         # tournament.add_alpha_zero_agent(alpha_zero_version=0)
         # tournament.add_alpha_zero_agent(alpha_zero_version=1)
+        tournament.add_randomized_agent(with_gui=with_gui)
         tournament.add_mcts_agent()
-        tournament.add_randomized_agent()
 
-        tournament.start_tournament(no_games=no_games)
+        tournament.start_tournament(
+            no_games=no_games
+        )
 
     @profile
     def train_alpha_zero(
