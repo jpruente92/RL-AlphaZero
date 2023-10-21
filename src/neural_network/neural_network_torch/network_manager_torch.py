@@ -32,6 +32,10 @@ class NetworkManagerTorch(NetworkManagerBase):
         torch.save(self.NEURAL_NETWORK.state_dict(),
                    "./neural_networks/torch/{}_version_{}.pth".format(self.NAME_FOR_SAVING, version))
 
+    # todo: unterschiede für training und kein training
+    #  torch.no-grad ...,
+    #  current player zusätzlich rein beim input?
+    #  train und eval
     def evaluate(
             self,
             states_so_far: List[np.array],
@@ -42,7 +46,9 @@ class NetworkManagerTorch(NetworkManagerBase):
         nn_input = torch.from_numpy(nn_input).float().to(DEVICE)
         self.NEURAL_NETWORK.eval()
         with torch.no_grad():
-            winner, probabilities = self.NEURAL_NETWORK.forward(nn_input).detach().cpu().numpy()
+            winner, probabilities = self.NEURAL_NETWORK.forward(nn_input)
+        winner = winner.detach().cpu().numpy()
+        probabilities = probabilities.detach().cpu().numpy()
         self.NEURAL_NETWORK.train()
         return winner, probabilities
 

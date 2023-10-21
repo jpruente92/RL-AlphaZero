@@ -49,7 +49,7 @@ class MCTSWithNeuralNetwork(MCTS):
             state_shape=node.GAME.STATE_SHAPE,
             current_player=node.CURRENT_PLAYER_NUMBER_BEFORE_STATE
         )
-        move_probabilities = move_probabilities.detach().cpu().numpy()
+        move_probabilities = move_probabilities
         move_prob_network = move_probabilities[0, node.ACTION_BEFORE_STATE]
         return move_prob_network
 
