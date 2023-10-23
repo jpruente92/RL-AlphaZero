@@ -42,7 +42,7 @@ class NetworkManagerTorch(NetworkManagerBase):
             state_shape: tuple,
             current_player: Literal[-1, 1]
     ) -> (float, np.array):
-        nn_input = self._prepare_nn_input(states_so_far, state_shape, current_player)
+        nn_input = self.prepare_nn_input(states_so_far, state_shape, current_player)
         nn_input = torch.from_numpy(nn_input).float().to(DEVICE)
         self.NEURAL_NETWORK.eval()
         with torch.no_grad():

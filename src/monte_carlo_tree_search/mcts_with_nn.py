@@ -53,7 +53,7 @@ class MCTSWithNeuralNetwork(MCTS):
         move_prob_network = move_probabilities[0, node.ACTION_BEFORE_STATE]
         return move_prob_network
 
-    def _simulate(
+    def _compute_winner_by_simulation(
             self,
             game: TwoPlayerGame,
             current_player: Literal[-1, 1]

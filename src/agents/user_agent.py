@@ -3,6 +3,7 @@ from logging import Logger
 from typing import Literal
 
 from agents.base_agent import BaseAgent
+from game_logic.game_state import GameState
 from game_logic.two_player_game import TwoPlayerGame
 
 
@@ -12,19 +13,23 @@ class UserAgent(BaseAgent):
             self,
             logger: Logger,
             player_number: Literal[-1, 1],
-            game: TwoPlayerGame
+            game: TwoPlayerGame,
 
     ):
-        super().__init__(logger=logger, name="User", player_number=player_number, game=game)
+        self.GUI = game.GUI
+        self.GAME = game
+        super().__init__(logger=logger, name="User", player_number=player_number)
 
     def compute_action(
             self,
-            training: bool = False
+            game_state: GameState
     ) -> int:
-        self.GAME.user_action = None
-        while self.GAME.user_action is None:
-            self.GAME.gui.refresh_picture(self.GAME.BOARD)
+        while True:
             time.sleep(0.01)
-        action = self.GAME.user_action
-        self.GAME.user_action = None
-        return action if action is not None else -1
+            self.GUI.refresh_picture(game_state)
+            action = self.GUI.next_user_action
+            if action is not None and self.GAME.action_is_feasible(action=action, game_state=game_state):
+                self.GUI.next_user_action = None
+                break
+        return action
+

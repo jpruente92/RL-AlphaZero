@@ -12,13 +12,14 @@ from controlling.profiling import profile
 from controlling.tournament import Tournament
 from enums.opponent_type import OpponentType
 from game_logic.connect_n import ConnectN
+from game_logic.two_player_game import TwoPlayerGame
 
 
 class Controller:
 
     def __init__(self, seed: Optional[int] = None):
         self.LOGGER = self._prepare_logger()
-        self.GAME = None
+        self.GAME: Optional[TwoPlayerGame] = None
 
         self.LOGGER.info("Controller created")
         self.LOGGER.debug(f"Device: {DEVICE}")
@@ -27,6 +28,7 @@ class Controller:
     # region Public Methods
 
     def play_game(self, opponent_type: OpponentType, alpha_zero_version=0, seconds_per_move=1):
+        self.GAME.set_gui_on()
         agent_1 = self._set_agent_1(
             opponent_type=opponent_type,
             alpha_zero_version=alpha_zero_version,
@@ -35,7 +37,7 @@ class Controller:
         agent_2 = UserAgent(
             logger=self.LOGGER,
             player_number=1,
-            game=self.GAME
+            game=self.GAME,
         )
         self.GAME.start_game(agent_1, agent_2, 1)
 
@@ -48,7 +50,6 @@ class Controller:
     ) -> None:
         tournament = Tournament(
             logger=self.LOGGER,
-            game=self.GAME,
             seconds_per_move=seconds_per_move,
             with_gui=with_gui
         )
@@ -59,18 +60,19 @@ class Controller:
         tournament.add_mcts_agent()
 
         tournament.start_tournament(
-            no_games=no_games
+            no_games=no_games,
+            game=self.GAME
         )
 
     @profile
     def train_alpha_zero(
             self,
-            name_for_saving: str,
             start_version: int = 0,
     ):
+        assert self.GAME is not None
         alpha_0 = AlphaZero(
-            game=self.GAME,
-            name_for_saving=name_for_saving
+            name_for_saving=self.GAME.NAME_FOR_SAVING,
+            logger=self.LOGGER
         )
         alpha_0.start_training_pipeline(
             start_version=start_version)
@@ -80,6 +82,7 @@ class Controller:
     ):
         self.GAME = \
             ConnectN(
+                logger=self.LOGGER,
                 n=3,
                 no_rows=3,
                 no_columns=3,
@@ -92,6 +95,7 @@ class Controller:
     ):
         self.GAME = \
             ConnectN(
+                logger=self.LOGGER,
                 n=4,
                 no_rows=6,
                 no_columns=7,
@@ -108,13 +112,13 @@ class Controller:
     ):
         self.GAME = \
             ConnectN(
+                logger=self.LOGGER,
                 n=n,
                 no_rows=no_rows,
                 no_columns=no_columns,
                 gravity_on=gravity_on
             )
         self.LOGGER.info("Game set to Connect 4")
-
 
     # endregion Public Methods
 
@@ -134,30 +138,31 @@ class Controller:
                      alpha_zero_version: int,
                      opponent_type: OpponentType,
                      seconds_per_move: int):
-        self.GAME.set_gui_on()
         if opponent_type == OpponentType.USER:
             agent_1 = UserAgent(
                 logger=self.LOGGER,
                 player_number=-1,
-                game=self.GAME)
+                game=self.GAME
+            )
         elif opponent_type == OpponentType.RANDOM:
             agent_1 = RandomizedAgent(
                 logger=self.LOGGER,
                 player_number=-1,
-                game=self.GAME)
+                sleep_time_before_move_s=0.5
+            )
         elif opponent_type == OpponentType.MONTE_CARLO_TREE_SEARCH:
             agent_1 = MCTSAgent(
                 logger=self.LOGGER,
-                player_number=-1,
                 game=self.GAME,
+                player_number=-1,
                 seconds_per_move=seconds_per_move)
         elif opponent_type == OpponentType.ALPHA_ZERO:
             agent_1 = AlphaZeroAgent(
                 logger=self.LOGGER,
                 player_number=-1,
-                game=self.GAME,
                 version=alpha_zero_version,
-                seconds_per_move=seconds_per_move)
+                seconds_per_move=seconds_per_move
+            )
         else:
             raise NotImplementedError
         return agent_1

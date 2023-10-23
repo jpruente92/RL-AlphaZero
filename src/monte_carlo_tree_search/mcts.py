@@ -2,9 +2,12 @@ import math
 import random
 import time
 from logging import Logger
-from typing import Literal
+from typing import Literal, Optional
+
+import numpy as np
 
 from constants.hyper_parameters import *
+from game_logic.game_state import GameState
 from game_logic.two_player_game import TwoPlayerGame
 from monte_carlo_tree_search.node import Node
 
@@ -12,30 +15,35 @@ from monte_carlo_tree_search.node import Node
 class MCTS:
     def __init__(
             self,
-            seconds_per_move: int,
             game: TwoPlayerGame,
+            seconds_per_move: int,
             player_number: Literal[-1, 1],
             logger: Logger
     ):
+        self.GAME = game
         self.START_PLAYER = 1
         self.SECONDS_PER_MOVE = seconds_per_move
-        self.GAME = game
         self.player_number = player_number
         self.LOGGER = logger
 
         self.total_number_updates = 0
         self.total_number_moves = 0
 
-        self.current_root = None
+        self.current_root: Optional[Node] = None
 
     # region Public Methods
     def reset(self):
         self.current_root = None
 
-    def step(self) -> int:
+    def step(
+            self,
+            game_state: GameState
+    ) -> int:
 
         self.total_number_moves += 1
-        self._set_root_to_last_relevant_node()
+        self._set_root_to_last_relevant_node(
+            game_state=game_state
+        )
         self._update_tree()
         return self._best_action()
 
@@ -65,13 +73,14 @@ class MCTS:
 
     # region Private Methods
 
-    def _update_tree(self):
+    def _update_tree(
+            self
+    ):
         start_time = time.time()
         step = 0
         while self._stop_condition_tree_update(start_time, step):
             step += 1
-            current_node = self.current_root
-            current_node = self._find_next_node_to_expand(current_node)
+            current_node = self._find_next_node_to_expand(self.current_root)
             self._expand(current_node)
             self.total_number_updates += 1
 
@@ -88,33 +97,35 @@ class MCTS:
 
     # region Expand
 
-    def _expand(self, node: Node):
+    def _expand(
+            self,
+            node: Node
+    ) -> None:
 
         if node.terminated:
-            winner_value = node.GAME.winner
+            winner_value = node.GAME_STATE.winner
             self._back_propagate(node, winner_value)
             return
 
-        for action in node.GAME.FEASIBLE_ACTIONS:
+        for action in node.GAME_STATE.feasible_actions:
             child = self._create_child(action, node)
             node.children.append(child)
-            value = self._compute_winner_value(child)
+            value = self._compute_winner_value(child=child)
             self._back_propagate(child, value)
+            self.LOGGER.debug(f"Added new child with depth: {child.DEPTH}")
 
     def _create_child(
             self,
             action: int,
             node: Node
     ) -> Node:
-        game_of_child = node.GAME.clone()
-        game_of_child.step_if_feasible(
+
+        game_state = self.GAME.step_if_feasible(
             action=action,
-            player_number=-node.CURRENT_PLAYER_NUMBER_BEFORE_STATE
+            game_state=node.GAME_STATE
         )
         child = Node(
-            game=game_of_child,
-            player_number=node.PLAYER_NUMBER,
-            current_player_number_before_state=-node.CURRENT_PLAYER_NUMBER_BEFORE_STATE,
+            game_state=game_state,
             action_before_state=action,
             father=node,
             depth=node.DEPTH + 1
@@ -122,29 +133,43 @@ class MCTS:
 
         return child
 
-    def _compute_winner_value(self, child: Node):
-        winner = child.GAME.winner
+    def _compute_winner_value(
+            self,
+            child: Node,
+    ) -> Literal[-1, 0, 1]:
+        winner = child.GAME_STATE.winner
         if winner is None:
-            if len(child.GAME.FEASIBLE_ACTIONS) == 0:
+            if len(child.GAME_STATE.feasible_actions) == 0:
                 child.terminated = True
                 winner_value = 0
-                child.GAME.winner = 0
+                child.GAME_STATE.winner = 0
             else:
                 child.terminated = False
-                winner_value = self._simulate(child.GAME.clone(), -child.CURRENT_PLAYER_NUMBER_BEFORE_STATE)
+                winner_value = self._compute_winner_by_simulation(
+                    game_state=child.GAME_STATE
+                )
         else:
             winner_value = winner
             child.terminated = True
         return winner_value
 
-    def _simulate(self, game, current_player):
-        while len(game.FEASIBLE_ACTIONS) > 0:
-            game.step_if_feasible(random.choice(game.FEASIBLE_ACTIONS), current_player)
-            current_player *= -1
-            if game.winner is not None:
-                return game.winner
-        # if the algorithm arrives here, no feasible actions are available -> tie
-        return 0
+    def _compute_winner_by_simulation(
+            self,
+            game_state: GameState,
+    ) -> Literal[-1, 0, 1]:
+        winner = 0
+        current_game_state = game_state
+        while len(current_game_state.feasible_actions) > 0:
+            action = random.choice(current_game_state.feasible_actions)
+            current_game_state = self.GAME.step_if_feasible(
+                action=action,
+                game_state=current_game_state
+            )
+            if current_game_state.winner is not None:
+                winner = current_game_state.winner
+                break
+
+        return winner
 
     def _back_propagate(self, node: Node, winner_value: Literal[-1, 0, 1]):
         while node is not None:
@@ -180,12 +205,11 @@ class MCTS:
 
     def _compute_value_part_of_score(self, node):
         value_part_of_score = node.sum_of_observed_values / node.visit_count
+
         # when the current player is not the player of the mcts we have to invert the value part
         # because we want to choose the action best for the opponent
-        if node.CURRENT_PLAYER_NUMBER_BEFORE_STATE != self.player_number:
+        if node.GAME_STATE.player_number_to_move != self.player_number:
             value_part_of_score *= -1
-        # the value part has to be multiplied with the player because we want to maximize his winning chance
-        value_part_of_score *= self.player_number
         return value_part_of_score
 
     def _compute_policy_part_of_score(self, node: Node):
@@ -209,27 +233,41 @@ class MCTS:
                 best_score = score
         return best_action
 
-    def _set_root_to_last_relevant_node(self):
-        new_root = self._find_grand_child_with_same_board()
+    def _set_root_to_last_relevant_node(
+            self,
+            game_state: GameState,
+    ) -> None:
+        new_root = self._find_grand_child_with_same_board(game_state)
         if new_root is not None:
             self.current_root = new_root
         else:
             self.current_root = Node(
-                self.GAME,
-                player_number=self.player_number,
-                current_player_number_before_state=-self.player_number,
+                game_state=game_state.clone(),
                 action_before_state=-1,
                 father=None,
                 depth=0
             )
 
-    def _find_grand_child_with_same_board(self):
+    def _find_grand_child_with_same_board(
+            self,
+            game_state: GameState
+    ):
+
         if self.current_root is None:
+            self.LOGGER.warning("Could not find child with same board!")
             return None
         for child in self.current_root.children:
             for grandchild in child.children:
-                if self.GAME.board_equal(grandchild.GAME.BOARD):
+                if self._board_equal(grandchild.GAME_STATE.board, game_state.board):
                     return grandchild
+        self.LOGGER.warning("Could not find child with same board!")
         return None
+
+    def _board_equal(
+            self,
+            board_1: np.array,
+            board_2: np.array
+    ) -> bool:
+        return np.array_equal(board_1, board_2)
 
     # endregion Private Methods

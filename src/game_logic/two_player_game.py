@@ -1,128 +1,163 @@
 import copy
 import random
+from logging import Logger
 from typing import Optional, Literal
 
 import numpy as np
 
 from agents.base_agent import BaseAgent
-from gui.gui import Gui
+from game_logic.game_state import GameState
 
 
 class TwoPlayerGame:
 
     def __init__(
             self,
+            logger: Logger,
             no_actions: int,
-            state_shape: tuple
+            state_shape: tuple,
+            name_for_saving: str
     ):
+        self.LOGGER = logger
         self.NO_ACTIONS = no_actions
         self.STATE_SHAPE = state_shape
-        self.BOARD = np.zeros(state_shape)
-        self.FEASIBLE_ACTIONS = [i for i in range(self.NO_ACTIONS)]
+        self.NAME_FOR_SAVING = name_for_saving
 
-        self.winner = None
-        self.user_action = None
-        self.all_board_states = []
-
+        self.next_user_action = None
         self.gui_on = None
+        self.GUI = None
 
     # region Public Methods
+
+    def create_start_game_state(
+            self,
+            player_number_to_move: Optional[int] = None
+    ) -> GameState:
+        return GameState(
+            feasible_actions=[i for i in range(self.NO_ACTIONS)],
+            winner=None,
+            board=np.zeros(self.STATE_SHAPE),
+            player_number_to_move=player_number_to_move,
+            previous_game_state=None
+        )
 
     def start_game(self,
                    agent_1: BaseAgent,
                    agent_2: BaseAgent,
                    index_starting_agent: Optional[int] = None
                    ) -> None:
-        agents = [agent_1, agent_2]
-        current_agent = self._initialize_current_agent(
-            agents=agents,
-            index_starting_agent=index_starting_agent
+        game_state = self.create_start_game_state()
+        game_state.player_number_to_move = index_starting_agent if index_starting_agent is not None \
+            else random.randint(0, 1)
+        game_state = self._game_loop(
+            agent_1=agent_1,
+            agent_2=agent_2,
+            game_state=game_state
         )
-        self._game_loop(agent_1, agent_2, current_agent)
         if self.gui_on:
             while True:
-                self.gui.refresh_picture(self.BOARD)
+                self.GUI.refresh_picture(game_state)
+
+    def action_is_feasible(
+            self,
+            action: int,
+            game_state: GameState
+    ) -> bool:
+        field = self._action_to_field(action=action, board=game_state.board)
+        return self._field_is_free(
+            field=field,
+            board=game_state.board
+        )
 
     def step_if_feasible(
             self,
             action: int,
-            player_number: Literal[-1, 1]
-    ) -> None:
-        field = self._action_to_field(action)
+            game_state: GameState
+    ) -> Optional[GameState]:
+        assert game_state.player_number_to_move is not None
 
-        if self._field_is_free(field=field):
-            self.BOARD[field] = player_number
-            self.all_board_states.append(copy.deepcopy(self.BOARD))
-            self._update_winner(field, player_number)
+        field = self._action_to_field(action=action, board=game_state.board)
 
-        self._update_feasible_actions(action, field)
+        new_game_state = None
+        if self._field_is_free(
+                field=field,
+                board=game_state.board
+        ):
+            new_board = copy.deepcopy(game_state.board)
+            new_board[field] = game_state.player_number_to_move
+            winner = self._compute_winner(
+                field=field,
+                board=new_board,
+                player_number_to_move=game_state.player_number_to_move
+            )
+            feasible_actions = self._compute_feasible_actions(
+                action=action,
+                field=field,
+                board=new_board
+            )
+            player_number_to_move: Literal[-1, 1] = -1
+            if game_state.player_number_to_move == -1:
+                player_number_to_move = 1
 
-        if self.gui_on:
-            self.gui.refresh_picture(self.BOARD)
+            new_game_state = GameState(
+                feasible_actions=feasible_actions,
+                winner=winner,
+                board=new_board,
+                player_number_to_move=player_number_to_move,
+                previous_game_state=game_state
+            )
 
-    def set_gui_on(self):
-        self.gui_on = True
-        self.gui = Gui(self)
-        self.gui.refresh_picture(self.BOARD)
+        return new_game_state
 
     def set_gui_off(self):
         self.gui_on = False
-
-    def reset(self):
-        self.BOARD = np.zeros(self.STATE_SHAPE)
-        self.winner = None
-        self.FEASIBLE_ACTIONS = [i for i in range(self.NO_ACTIONS)]
-        self.user_action = None
-        self.all_board_states = []
-
-    def board_equal(self, other_board: np.array):
-        return np.array_equal(self.BOARD, other_board)
 
     # endregion Public Methods
 
     # region Private Methods
 
-    def _initialize_current_agent(
-            self,
-            # agents: list[BaseAgent],  # todo: comment in if env is ready
-            agents,
-            index_starting_agent: Optional[int]
-    ) -> BaseAgent:
-        if index_starting_agent is None:
-            index_starting_agent = random.randint(0, 1)
-        return agents[index_starting_agent]
-
     def _game_loop(
             self,
             agent_1: BaseAgent,
             agent_2: BaseAgent,
-            current_agent: BaseAgent
-    ) -> None:
-        while self.winner is None:
-            if len(self.FEASIBLE_ACTIONS) == 0:
-                self.winner = 0
+            game_state: GameState
+    ) -> GameState:
+        while game_state.winner is None:
+            if len(game_state.feasible_actions) == 0:
+                game_state.winner = 0
                 break
-            action = current_agent.compute_action()
-            self.step_if_feasible(action, current_agent.player_number)
-            current_agent = agent_1 if current_agent is agent_2 else agent_2
+            current_agent = agent_1 if game_state.player_number_to_move == agent_1.player_number else agent_2
+            action = current_agent.compute_action(game_state)
+            game_state = self.step_if_feasible(
+                action=action,
+                game_state=game_state
+            )
+            if self.gui_on:
+                self.GUI.next_user_action = None
+                self.GUI.refresh_picture(game_state)
+
+        return game_state
 
     def _field_is_free(
             self,
-            field: tuple
+            field: tuple,
+            board: np.array
     ) -> bool:
         if not self._is_field_valid(field):
+            self.LOGGER.debug(f"field {field} not valid")
             return False
-        if self.BOARD[field] == 0:
+        if board[field] == 0:
             return True
+        self.LOGGER.debug(f"field {field} not free: {board[field]}")
         return False
 
     def _is_field_valid(
             self,
             field: tuple
     ) -> bool:
-        if len(field) != len(self.BOARD.shape):
+        if len(field) != len(self.STATE_SHAPE):
             return False
-        for coord, size in zip(field, self.BOARD.shape):
+        for coord, size in zip(field, self.STATE_SHAPE):
             if coord < 0 or coord >= size:
                 return False
         return True
@@ -131,26 +166,30 @@ class TwoPlayerGame:
 
     # region Abstract Methods
 
-    def clone(self):
+    def set_gui_on(self):
         raise NotImplementedError
 
     def _action_to_field(
             self,
-            action: int
+            action: int,
+            board: np.array
     ) -> tuple:
         raise NotImplementedError
 
-    def _update_feasible_actions(
+    def _compute_feasible_actions(
             self,
             action: int,
-            field: tuple) -> None:
+            field: tuple,
+            board: np.array
+    ) -> list[int]:
         raise NotImplementedError
 
-    def _update_winner(
+    def _compute_winner(
             self,
             field: tuple,
-            player_number: Literal[-1, 1]
-    ) -> None:
+            board: np.array,
+            player_number_to_move: Literal[-1, 1]
+    ) -> Literal[None, -1, 0, 1]:
         raise NotImplementedError
 
     # endregion Abstract Methods

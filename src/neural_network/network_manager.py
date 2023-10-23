@@ -26,6 +26,32 @@ class NetworkManagerBase:
         self.NEURAL_NETWORK = self._create_network_from_scratch()
         self._load_network_data_from_file(name_for_saving, version)
 
+    # todo: add unit test
+    # noinspection PyArgumentList
+    def prepare_nn_input(
+            self,
+            states_so_far: List[np.array],
+            state_shape: Tuple,
+            current_player: Literal[-1, 1]
+    ) -> np.array:
+        list_of_3_dimensional_states = []
+        enough_states_available = len(states_so_far) >= NO_BOARD_STATES_SAVED
+        if enough_states_available:
+            for state in states_so_far[-NO_BOARD_STATES_SAVED:]:
+                list_of_3_dimensional_states.append(self._state_to_3_dimensional_state(state, current_player))
+        else:
+            for state in states_so_far:
+                list_of_3_dimensional_states.append(self._state_to_3_dimensional_state(state, current_player))
+            self._fill_with_empty_states(list_of_3_dimensional_states=list_of_3_dimensional_states,
+                                         states_so_far=states_so_far,
+                                         state_shape=state_shape,
+                                         current_player=current_player
+                                         )
+
+        nn_input = np.array(list_of_3_dimensional_states)
+        nn_input = nn_input.reshape(-1, 3 * NO_BOARD_STATES_SAVED, *state_shape)
+        return nn_input
+
     # region Abstract Methods
     def save_model(self, version: int):
         raise NotImplementedError
@@ -55,32 +81,6 @@ class NetworkManagerBase:
                                 f"Path= {os.path.abspath(file_path)}")
 
     # region Input preparation
-
-    # todo: add unit test
-    # noinspection PyArgumentList
-    def _prepare_nn_input(
-            self,
-            states_so_far: List[np.array],
-            state_shape: Tuple,
-            current_player: Literal[-1, 1]
-    ) -> np.array:
-        list_of_3_dimensional_states = []
-        enough_states_available = len(states_so_far) >= NO_BOARD_STATES_SAVED
-        if enough_states_available:
-            for state in states_so_far[-NO_BOARD_STATES_SAVED:]:
-                list_of_3_dimensional_states.append(self._state_to_3_dimensional_state(state, current_player))
-        else:
-            for state in states_so_far:
-                list_of_3_dimensional_states.append(self._state_to_3_dimensional_state(state, current_player))
-            self._fill_with_empty_states(list_of_3_dimensional_states=list_of_3_dimensional_states,
-                                         states_so_far=states_so_far,
-                                         state_shape=state_shape,
-                                         current_player=current_player
-                                         )
-
-        nn_input = np.array(list_of_3_dimensional_states)
-        nn_input = nn_input.reshape(-1, 3 * NO_BOARD_STATES_SAVED, *state_shape)
-        return nn_input
 
     # todo: add unit test
     def _fill_with_empty_states(
