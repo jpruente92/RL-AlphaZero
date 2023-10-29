@@ -1,6 +1,12 @@
-import time
+import numpy as np
 
-start = time.time()
+npa = np.array([[1, 2, 3], [4, 5, 6]])
+os = npa.shape
+print(npa)
+print(os)
+a = tuple(npa.reshape(-1))
+print(a)
 
-time.sleep(2)
-print(time.time() - start)
+a = np.array(a).reshape(os)
+print(a)
+print(a.shape)

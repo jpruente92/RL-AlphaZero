@@ -49,11 +49,11 @@ class Tournament:
                 agent_1.set_player(1)
                 agent_2.set_player(-1)
                 for index_game in range(no_games):
-                    game.start_game(agent_1, agent_2)
+                    game_state = game.start_game(agent_1, agent_2)
                     nr_games_played += 1
                     print(f"\r\t{nr_games_played} out of {self._compute_total_no_games(no_games)} games played", end="")
                     self._update_tournament_statistics(
-                        winner=game.winner,
+                        winner=game_state.winner,
                         index_first_player=index_first_player,
                         index_second_player=index_second_player,
                         number_by_index_first_index_second_outcome=number_by_index_first_index_second_outcome,
@@ -63,20 +63,19 @@ class Tournament:
             number_by_index_first_index_second_outcome=number_by_index_first_index_second_outcome,
             total_number_wins_by_player_index=total_number_wins_by_player_index)
 
-    def add_alpha_zero_agent(self, alpha_zero_version: int):
+    def add_alpha_zero_agent(self, alpha_zero_agent: AlphaZeroAgent):
         self.AGENTS.append(
-            AlphaZeroAgent(
-                logger=self.LOGGER,
-                player_number=-1,
-                version=alpha_zero_version,
-                seconds_per_move=self.SECONDS_PER_MOVE
-            )
+            alpha_zero_agent
         )
 
-    def add_mcts_agent(self):
+    def add_mcts_agent(
+            self,
+            game: TwoPlayerGame
+    ) -> None:
         self.AGENTS.append(
             MCTSAgent(
                 logger=self.LOGGER,
+                game=game,
                 player_number=-1,
                 seconds_per_move=self.SECONDS_PER_MOVE
             )

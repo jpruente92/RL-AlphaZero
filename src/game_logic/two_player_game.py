@@ -45,10 +45,12 @@ class TwoPlayerGame:
                    agent_1: BaseAgent,
                    agent_2: BaseAgent,
                    index_starting_agent: Optional[int] = None
-                   ) -> None:
+                   ) -> GameState:
         game_state = self.create_start_game_state()
-        game_state.player_number_to_move = index_starting_agent if index_starting_agent is not None \
-            else random.randint(0, 1)
+        if index_starting_agent is None:
+            index_starting_agent = random.randint(0, 1)
+
+        game_state.player_number_to_move = agent_1.player_number if index_starting_agent == 0 else agent_2.player_number
         game_state = self._game_loop(
             agent_1=agent_1,
             agent_2=agent_2,
@@ -57,6 +59,7 @@ class TwoPlayerGame:
         if self.gui_on:
             while True:
                 self.GUI.refresh_picture(game_state)
+        return game_state
 
     def action_is_feasible(
             self,
@@ -75,6 +78,7 @@ class TwoPlayerGame:
             game_state: GameState
     ) -> Optional[GameState]:
         assert game_state.player_number_to_move is not None
+        assert game_state.player_number_to_move != 0
 
         field = self._action_to_field(action=action, board=game_state.board)
 
@@ -85,6 +89,7 @@ class TwoPlayerGame:
         ):
             new_board = copy.deepcopy(game_state.board)
             new_board[field] = game_state.player_number_to_move
+
             winner = self._compute_winner(
                 field=field,
                 board=new_board,
@@ -122,6 +127,8 @@ class TwoPlayerGame:
             agent_2: BaseAgent,
             game_state: GameState
     ) -> GameState:
+        assert agent_1.player_number == 1 or agent_2.player_number == 1
+        assert agent_1.player_number == -1 or agent_2.player_number == -1
         while game_state.winner is None:
             if len(game_state.feasible_actions) == 0:
                 game_state.winner = 0
@@ -132,6 +139,7 @@ class TwoPlayerGame:
                 action=action,
                 game_state=game_state
             )
+
             if self.gui_on:
                 self.GUI.next_user_action = None
                 self.GUI.refresh_picture(game_state)

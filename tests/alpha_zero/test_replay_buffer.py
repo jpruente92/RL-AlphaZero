@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 
 from alpha_zero.replay_buffer import ReplayBuffer
@@ -11,7 +13,10 @@ def test_loading_saving(mocker):
     mocker.patch('alpha_zero.replay_buffer.json.load')
 
     replay_buffer = ReplayBuffer(
-        name_for_saving="test")
+        logger=logging.getLogger(),
+        version=0,
+        name_for_saving="test"
+    )
     replay_buffer.add_experience(
         ReplayBufferExperience(
             neural_network_input=np.array([[1, 2], [3, 4]]),
@@ -29,6 +34,6 @@ def test_loading_saving(mocker):
     experiences_before = replay_buffer.experiences
     replay_buffer.save_to_file(version=0)
     replay_buffer.reset()
-    replay_buffer.load_from_file(version=0)
+    replay_buffer._load_from_file()
     for experience_1, experience_2 in zip(experiences_before, replay_buffer.experiences):
         assert experience_1 == experience_2

@@ -2,24 +2,20 @@ from controlling.controller import Controller
 from enums.opponent_type import OpponentType
 
 if __name__ == '__main__':
-    controller = Controller(seed=46532)
+    controller = Controller()
     controller.set_game_to_connect_4()
 
-    # todo: muss agent das game verwalten? welche klassen müssen das game verwalten?
-    # -    agent
-    # - controller
-    # -     tournament
-    # -     gui
-    # - mcts
-    # -     node
-    # -     agent compute action -> vllt reicht hier game state?
-
+    # todo: refactor alpha zero algorithm
+        # todo: replay buffer von 1 auf 0 manuell zurücksetzen
+        # todo: training
+            # todo: what do the following torch things do: item, zero_grad, what is a tensor, backward,
+            # todo: torch.no_grad, training, eval
+            # todo: unterschiede für training und kein training
+            # todo: check if type hints are correct
 
     # todo: refactor mcts with neural network
     # todo: refactor neural network
     # todo: refactor replay buffer -> do not store np arrays
-    # todo: refactor alpha zero agent
-    # todo: refactor alpha zero algorithm
 
     # todo: assert alpha 0 exists for a given version
     # todo: make training alpha 0 in run
@@ -27,6 +23,6 @@ if __name__ == '__main__':
     # todo: gui gets base class
     # todo: gui errors
     # todo: why does the gui have to be refreshed in a loop
-    # todo: gui: highlighting does not work
+    # todo: gui: highlighting of winning stones1
 
-    controller.play_game(opponent_type=OpponentType.MONTE_CARLO_TREE_SEARCH, alpha_zero_version=1, seconds_per_move=1)
+    controller.play_game(opponent_type=OpponentType.ALPHA_ZERO, alpha_zero_version=1, seconds_per_move=1)

@@ -1,10 +1,10 @@
-import os
 from logging import Logger
 from typing import Literal, List, Tuple
 
 import numpy as np
+from torch import Tensor
 
-from constants.constants import NEURAL_NETWORK_DIR_PATH
+from alpha_zero.replay_buffer_experience import ReplayBufferExperience
 from constants.hyper_parameters import NO_BOARD_STATES_SAVED
 from neural_network.neural_network_torch.network_torch import NeuralNetworkTorch
 
@@ -21,19 +21,75 @@ class NetworkManagerBase:
     ):
         self.LOGGER = logger
         self.NAME_FOR_SAVING = name_for_saving
+        self.VERSION = version
         self.NO_ACTIONS = no_actions
         self.STATE_SHAPE = state_shape
         self.NEURAL_NETWORK = self._create_network_from_scratch()
-        self._load_network_data_from_file(name_for_saving, version)
+        self._load_network_data_from_file()
 
+    # region Public Abstract Methods
+    def clone(self):
+        raise NotImplementedError
+
+    def save_model(
+            self,
+            version: int
+    ) -> None:
+        raise NotImplementedError
+
+    # todo: clarify which player has to be given together with the states
+    def evaluate(
+            self,
+            states_so_far: List[np.array],
+            current_player: Literal[-1, 1]
+    ) -> (float, np.array):
+        raise NotImplementedError
+
+    def train_batch(
+            self,
+            learning_rate: float,
+            experiences_of_batch: list[ReplayBufferExperience]
+    ) -> (float, float):
+        raise NotImplementedError
+
+    def compute_loss_of_batch(
+            self,
+            alpha_zero_agent,
+            experiences: list[ReplayBufferExperience],
+            number_of_batches_validation: int
+    ) -> (float, float):
+        raise NotImplementedError
+
+    # endregion Public Abstract Methods
+
+    # region Private Abstract Methods
+
+    def _evaluate_batch(
+            self,
+            input_tensor: Tensor
+    ) -> (Tensor, Tensor):
+        raise NotImplementedError
+
+    def _create_network_from_scratch(self) -> NeuralNetworkTorch:
+        raise NotImplementedError
+
+    def _load_model(self, path: str):
+        raise NotImplementedError
+
+    def _load_network_data_from_file(self) -> None:
+        raise NotImplementedError
+
+    # endregion Private Abstract Methods
+
+    # region Public Methods
     # todo: add unit test
     # noinspection PyArgumentList
     def prepare_nn_input(
             self,
             states_so_far: List[np.array],
-            state_shape: Tuple,
             current_player: Literal[-1, 1]
     ) -> np.array:
+        state_shape = states_so_far[0].shape
         list_of_3_dimensional_states = []
         enough_states_available = len(states_so_far) >= NO_BOARD_STATES_SAVED
         if enough_states_available:
@@ -50,35 +106,13 @@ class NetworkManagerBase:
 
         nn_input = np.array(list_of_3_dimensional_states)
         nn_input = nn_input.reshape(-1, 3 * NO_BOARD_STATES_SAVED, *state_shape)
+        nn_input = np.squeeze(nn_input)
         return nn_input
 
-    # region Abstract Methods
-    def save_model(self, version: int):
-        raise NotImplementedError
+    def reset_neural_network(self):
+        self._load_network_data_from_file()
 
-    def evaluate(
-            self,
-            states_so_far: List[np.array],
-            state_shape: tuple,
-            current_player: Literal[-1, 1]
-    ) -> (float, np.array):
-        raise NotImplementedError
-
-    def _create_network_from_scratch(self) -> NeuralNetworkTorch:
-        raise NotImplementedError
-
-    def _load_model(self, path: str):
-        raise NotImplementedError
-
-    # endregion Abstract Methods
-
-    def _load_network_data_from_file(self, name_for_saving, version) -> None:
-        file_path = os.path.join(NEURAL_NETWORK_DIR_PATH, "torch", f"{name_for_saving}_version_{version}.pth")
-        if version >= 0 and name_for_saving is not None and os.path.exists(file_path):
-            self._load_model(file_path)
-        else:
-            self.LOGGER.warning(f"Network {name_for_saving} version {version} could not be loaded! "
-                                f"Path= {os.path.abspath(file_path)}")
+    # endregion Public Methods
 
     # region Input preparation
 

@@ -6,5 +6,6 @@ if __name__ == '__main__':
 
     controller.simulate_tournament(
         no_games=25,
-        seconds_per_move=0.1
+        seconds_per_move=0.1,
+        with_gui=False
     )

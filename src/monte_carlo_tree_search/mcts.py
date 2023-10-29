@@ -30,10 +30,12 @@ class MCTS:
         self.total_number_moves = 0
 
         self.current_root: Optional[Node] = None
+        self.all_roots = []
 
     # region Public Methods
     def reset(self):
         self.current_root = None
+        self.all_roots = []
 
     def step(
             self,
@@ -242,11 +244,12 @@ class MCTS:
             self.current_root = new_root
         else:
             self.current_root = Node(
-                game_state=game_state.clone(),
+                game_state=game_state,
                 action_before_state=-1,
                 father=None,
-                depth=0
+                depth=game_state.get_number_moves_made()
             )
+        self.all_roots.append(self.current_root)
 
     def _find_grand_child_with_same_board(
             self,
@@ -254,13 +257,12 @@ class MCTS:
     ):
 
         if self.current_root is None:
-            self.LOGGER.warning("Could not find child with same board!")
             return None
         for child in self.current_root.children:
             for grandchild in child.children:
                 if self._board_equal(grandchild.GAME_STATE.board, game_state.board):
                     return grandchild
-        self.LOGGER.warning("Could not find child with same board!")
+        self.LOGGER.debug("Could not find child with same board!")
         return None
 
     def _board_equal(

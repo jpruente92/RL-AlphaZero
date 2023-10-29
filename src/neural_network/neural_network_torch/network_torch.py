@@ -1,4 +1,4 @@
-from torch import nn
+from torch import nn, Tensor
 
 from constants.hyper_parameters import *
 from neural_network.neural_network_torch.layers.convolutional_layer import ConvolutionalLayer
@@ -22,8 +22,10 @@ class NeuralNetworkTorch(nn.Module):
         self.value_head = ValueHead(state_shape)
         self.to(DEVICE)
 
-    def forward(self, input):
-        x = input
+    def forward(self,
+                input_tensor: Tensor
+                ):
+        x = input_tensor
         x = self.conv(x)
         for block in range(NR_RESIDUAL_LAYERS):
             x = getattr(self, "res_%i" % block)(x)

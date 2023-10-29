@@ -9,7 +9,7 @@ import numpy as np
 class ReplayBufferExperience:
     neural_network_input: np.array
     search_probabilities: np.array
-    outcome: Optional[int]
+    outcome: Optional[float]
 
     def to_dict(self):
         return dataclasses.asdict(self)
