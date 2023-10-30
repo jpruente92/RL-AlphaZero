@@ -11,6 +11,7 @@
 
 # Improvements
 
+- alte Spiele nachträglich visualisieren
 - evaluation also parallel
 - store replay buffer with less memory
 - profile and try to improve run time

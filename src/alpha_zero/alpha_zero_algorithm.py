@@ -187,7 +187,8 @@ class AlphaZero:
             search_probabilities = self._compute_search_probabilities(game=game, current_node=node)
             neural_network_input = current_agent.NETWORK_MANAGER.prepare_nn_input(
                 copy.deepcopy(all_board_states),
-                node.GAME_STATE.player_number_to_move
+                node.GAME_STATE.player_number_to_move,
+                single_evaluation=False
             )
 
             experience = ReplayBufferExperience(

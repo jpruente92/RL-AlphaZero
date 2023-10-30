@@ -87,7 +87,8 @@ class NetworkManagerBase:
     def prepare_nn_input(
             self,
             states_so_far: List[np.array],
-            current_player: Literal[-1, 1]
+            current_player: Literal[-1, 1],
+            single_evaluation: bool
     ) -> np.array:
         state_shape = states_so_far[0].shape
         list_of_3_dimensional_states = []
@@ -106,7 +107,8 @@ class NetworkManagerBase:
 
         nn_input = np.array(list_of_3_dimensional_states)
         nn_input = nn_input.reshape(-1, 3 * NO_BOARD_STATES_SAVED, *state_shape)
-        nn_input = np.squeeze(nn_input)
+        if not single_evaluation:
+            nn_input = np.squeeze(nn_input)
         return nn_input
 
     def reset_neural_network(self):
