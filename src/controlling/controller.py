@@ -56,6 +56,8 @@ class Controller:
             with_gui=with_gui
         )
 
+        tournament.add_randomized_agent(with_gui=with_gui)
+
         tournament.add_alpha_zero_agent(
             alpha_zero_agent=self._create_alpha_zero_agent(
                 alpha_zero_version=0,
@@ -66,8 +68,7 @@ class Controller:
         #         alpha_zero_version=1,
         #         seconds_per_move=seconds_per_move)
         # )
-        # tournament.add_randomized_agent(with_gui=with_gui)
-        tournament.add_mcts_agent(game=self.GAME)
+        # tournament.add_mcts_agent(game=self.GAME)
 
         tournament.start_tournament(
             no_games=no_games,

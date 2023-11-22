@@ -5,6 +5,8 @@ if __name__ == '__main__':
     controller = Controller()
     controller.set_game_to_connect_4()
 
+
+    # todo: test squeeze, test training again
     # todo: refactor alpha zero algorithm
         # todo: replay buffer von 1 auf 0 manuell zurücksetzen
         # todo: training
@@ -25,4 +27,4 @@ if __name__ == '__main__':
     # todo: why does the gui have to be refreshed in a loop
     # todo: gui: highlighting of winning stones1
 
-    controller.play_game(opponent_type=OpponentType.ALPHA_ZERO, alpha_zero_version=1, seconds_per_move=1)
+    controller.play_game(opponent_type=OpponentType.ALPHA_ZERO, alpha_zero_version=0, seconds_per_move=1)

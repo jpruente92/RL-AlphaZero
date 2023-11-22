@@ -89,7 +89,6 @@ class GuiConnectN(Tk):
 
     def _print_winner(self, game_state: GameState) -> None:
         if game_state.winner is not None:
-            print("winner", game_state.winner)
             middle = np.math.floor(self.NO_COLUMNS / 2)
             x = OFFSET_SQUARE * (middle + 1) + WIDTH_SQUARE * middle
             y = OFFSET_SQUARE * (self.NO_ROWS + 1) + WIDTH_SQUARE * self.NO_ROWS

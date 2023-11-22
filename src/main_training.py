@@ -6,5 +6,5 @@ if __name__ == '__main__':
 
     controller.train_alpha_zero(
         start_version=1,
-        parallel=True
+        parallel=False
     )

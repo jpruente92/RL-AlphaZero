@@ -5,7 +5,7 @@ if __name__ == '__main__':
     controller.set_game_to_connect_4()
 
     controller.simulate_tournament(
-        no_games=25,
-        seconds_per_move=0.1,
-        with_gui=False
+        no_games=1,
+        seconds_per_move=1,
+        with_gui=True
     )

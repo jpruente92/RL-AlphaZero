@@ -2,9 +2,9 @@ import torch
 
 #  region Training Parameters
 WIN_PERCENTAGE = 55
-NUMBER_GAMES_PER_SELF_PLAY = 2_500
-BATCH_SIZE = 128
-NUMBER_OF_BATCHES_TRAINING = 16_000
+NUMBER_GAMES_PER_SELF_PLAY = 0
+BATCH_SIZE = 64
+NUMBER_OF_BATCHES_TRAINING = 50_000
 PERCENTAGE_DATA_FOR_VALIDATION = 10
 NUMBER_GAMES_VS_OLD_VERSION = 400
 # in some games we have a lot of ties, and therefore we count them as wins but weighted with this weight,
@@ -22,7 +22,7 @@ WEIGHT_DECAY = 0.0001
 # endregion Optimizer Parameters
 
 # region Network Architecture
-NR_RESIDUAL_LAYERS = 19
+NO_RESIDUAL_LAYERS = 19
 NO_BOARD_STATES_SAVED = 1
 # endregion Network Architecture
 

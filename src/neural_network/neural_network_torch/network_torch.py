@@ -16,7 +16,7 @@ class NeuralNetworkTorch(nn.Module):
         super().__init__()
         self.conv = ConvolutionalLayer()
         # residual blocks
-        for block in range(NR_RESIDUAL_LAYERS):
+        for block in range(NO_RESIDUAL_LAYERS):
             setattr(self, "res_%i" % block, ResidualLayer())
         self.policy_head = PolicyHead(state_shape, no_actions)
         self.value_head = ValueHead(state_shape)
@@ -27,6 +27,6 @@ class NeuralNetworkTorch(nn.Module):
                 ):
         x = input_tensor
         x = self.conv(x)
-        for block in range(NR_RESIDUAL_LAYERS):
+        for block in range(NO_RESIDUAL_LAYERS):
             x = getattr(self, "res_%i" % block)(x)
         return self.value_head(x), self.policy_head(x)

@@ -54,7 +54,9 @@ class MCTSWithNeuralNetwork(MCTS):
         self.training = False
 
     def _compute_policy_part_of_score(self, node: Node):
-        move_probability = self._compute_move_probability_with_network(node) if self.NETWORK_MANAGER.VERSION > 0 else 1
+        if self.NETWORK_MANAGER.VERSION < 1:
+            return super()._compute_policy_part_of_score(node)
+        move_probability = self._compute_move_probability_with_network(node)
         return C * move_probability * math.sqrt(math.log(node.FATHER.visit_count) / node.visit_count)
 
     def _compute_move_probability_with_network(self, node: Node) -> float:
@@ -72,7 +74,6 @@ class MCTSWithNeuralNetwork(MCTS):
     ) -> Literal[-1, 0, 1]:
         if self.NETWORK_MANAGER.VERSION < 1:
             return super()._compute_winner_by_simulation(game_state)
-
         winner, _ = self.NETWORK_MANAGER.evaluate(
             states_so_far=game_state.get_list_of_all_board_states_from_start_to_end(),
             current_player=game_state.player_number_to_move
