@@ -38,6 +38,14 @@ def on_prev():
     draw_board(canvas, boards[current_turn])
 
 
+def keypress(event):
+    global current_turn
+    if event.keysym == 'Right':
+        on_next()
+    elif event.keysym == 'Left':
+        on_prev()
+
+
 def start_gui(boards_input: np.array):
     global canvas, current_turn, boards, rows, cols
 
@@ -52,10 +60,15 @@ def start_gui(boards_input: np.array):
     canvas.config(width=canvas_width, height=canvas_height)
     canvas.grid(row=1, column=0, columnspan=2)
 
+    # Buttons für Züge
     next_button = tk.Button(root, text="Nächster Zug", command=on_next)
     next_button.grid(row=0, column=1)
     prev_button = tk.Button(root, text="Vorheriger Zug", command=on_prev)
     prev_button.grid(row=0, column=0)
+
+    # Tastatureingabe ermöglichen
+    root.bind('<Left>', keypress)
+    root.bind('<Right>', keypress)
 
     # Initialisiere die Spielbretter
     current_turn = 0
