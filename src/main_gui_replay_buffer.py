@@ -52,8 +52,6 @@ def print_board(board):
 
 
 if __name__ == '__main__':
-    array = np.array([["", "", ""], ["", "", ""]])
-    print(get_board_dimensions(array))
     print('loading replay...')
     data = load_replay_buffer("../replay_buffers/Connect_4_version_0.json")
     print('replay loaded successfully.')
