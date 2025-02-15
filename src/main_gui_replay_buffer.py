@@ -21,7 +21,7 @@ def calculate_boards_for_replay(replay_buffer):
 
     for state in replay_buffer:
         neural_network_input = state['neural_network_input']
-        player1_board, player2_board, _ = neural_network_input[0]
+        player1_board, player2_board, _ = neural_network_input
 
         rows, cols = np.shape(player1_board)
         # Erstellen eines neuen Boards mit neutralen Feldern (0)

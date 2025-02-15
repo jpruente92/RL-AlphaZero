@@ -89,7 +89,7 @@ class GuiConnectN(Tk):
 
     def _print_winner(self, game_state: GameState) -> None:
         if game_state.winner is not None:
-            middle = np.math.floor(self.NO_COLUMNS / 2)
+            middle = np.floor(self.NO_COLUMNS / 2)
             x = OFFSET_SQUARE * (middle + 1) + WIDTH_SQUARE * middle
             y = OFFSET_SQUARE * (self.NO_ROWS + 1) + WIDTH_SQUARE * self.NO_ROWS
             if game_state.winner == 1:
@@ -101,7 +101,7 @@ class GuiConnectN(Tk):
                                     text="The winner is player {}".format(winner),
                                     fill="black")
         elif len(game_state.feasible_actions) == 0:
-            middle = np.math.floor(self.NO_COLUMNS / 2)
+            middle = np.floor(self.NO_COLUMNS / 2)
             x = OFFSET_SQUARE * (middle + 1) + WIDTH_SQUARE * middle
             y = OFFSET_SQUARE * (self.NO_ROWS + 1) + WIDTH_SQUARE * self.NO_ROWS
             self.CANVAS.create_text((x + 0.5 * WIDTH_SQUARE, self.HEIGHT_FIELD - y - 0.5 * WIDTH_SQUARE),
